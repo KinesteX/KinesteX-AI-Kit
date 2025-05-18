@@ -1,7 +1,7 @@
 import SwiftUI
 import WebKit
 
-public struct CameraView: View {
+public struct KinestexView: View {
     let apiKey: String
     let companyName: String
     let userId: String
@@ -10,7 +10,7 @@ public struct CameraView: View {
     @Binding var isLoading: Bool
     let onMessageReceived: (WebViewMessage) -> Void
     @StateObject private var webViewState = WebViewState()
-    @Binding var currentExercise: String
+    @Binding var currentExercise: String?
     @Binding var currentRestSpeech: String?
     
     public init(
@@ -21,7 +21,7 @@ public struct CameraView: View {
         data: [String: Any]?,
         isLoading: Binding<Bool>,
         onMessageReceived: @escaping (WebViewMessage) -> Void,
-        currentExercise: Binding<String>,
+        currentExercise: Binding<String?>,
         currentRestSpeech: Binding<String?>
     ) {
         self.apiKey = apiKey
@@ -48,12 +48,14 @@ public struct CameraView: View {
                 webViewState: webViewState
             )
             if isLoading {
-               Color.black
+                Color.black
             }
         }
         .background(Color.black)
         .onChange(of: currentExercise) { newValue in
-            updateCurrentExercise(newValue)
+            if let exercise = newValue {
+                updateCurrentExercise(exercise)
+            }
         }
         .onChange(of: currentRestSpeech) { newValue in
             if let restSpeech = newValue {
@@ -70,7 +72,7 @@ public struct CameraView: View {
             let cleanupScript = """
                 (function() {
                     window.postMessage({ 'currentExercise': 'Stop Camera' }, '*');
-
+            
                     document.querySelectorAll('video').forEach(function(video) {
                         video.pause();
                         video.src = '';
@@ -103,7 +105,7 @@ public struct CameraView: View {
             """
             
             // Step 1: Pause all media playback (iOS 15.0+)
-            if #available(iOS 15.0, *) {
+            if #available(iOS 15.0, macOS 12.0, *) {
                 webView.pauseAllMediaPlayback {
                     runCleanupScript(webView, cleanupScript)
                 }
@@ -136,17 +138,23 @@ public struct CameraView: View {
         }
     }
     
-    private func updateCurrentExercise(_ exercise: String) {
+    private func updateCurrentExercise(_ exercise: String?) {
         guard let webView = webViewState.webView else {
             print("⚠️ KinesteX: WebView is not available")
             return
         }
-        let script = "window.postMessage({ 'currentExercise': '\(exercise)' }, '*');"
+        let script: String
+        if let exercise = exercise {
+            script = "window.postMessage({ 'currentExercise': '\(exercise)' }, '*');"
+        } else {
+            print("⚠️ KinesteX: Exercise is nil")
+            return
+        }
         webView.evaluateJavaScript(script) { _, error in
             if let error = error {
                 print("⚠️ KinesteX: JavaScript Error: \(error.localizedDescription)")
             } else {
-                print("✅ KinesteX: Successfully updated exercise to: \(exercise)")
+                print("✅ KinesteX: Successfully updated exercise to: \(exercise ?? "NA")")
             }
         }
     }
@@ -167,7 +175,7 @@ public struct CameraView: View {
             if let error = error {
                 print("⚠️ KinesteX: JavaScript Error: \(error.localizedDescription)")
             } else {
-                print("✅ KinesteX: Successfully updated rest speech to: \(restSpeech)")
+                print("✅ KinesteX: Successfully updated rest speech to: \(restSpeech ?? "NA")")
             }
         }
     }
