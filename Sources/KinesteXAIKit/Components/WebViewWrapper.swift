@@ -8,7 +8,7 @@ class DebugWKWebView: WKWebView {
 }
 // Cross-platform WebView wrapper view
 @available(iOS 13.0, macOS 10.15, *)
-public struct WebViewWrapperView: View {
+struct WebViewWrapperView: View {
     let url: URL
     let apiKey: String
     let companyName: String

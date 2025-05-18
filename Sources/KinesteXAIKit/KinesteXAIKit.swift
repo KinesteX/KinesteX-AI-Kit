@@ -27,7 +27,7 @@ public struct KinesteXAIKit {
         user: UserDetails?,
         isLoading: Binding<Bool>,
         customParams: [String: Any] = [:],
-        onMessageReceived: @escaping (WebViewMessage) -> Void
+        onMessageReceived: @escaping (KinestexMessage) -> Void
     ) -> AnyView {
         let defaultData: [String: Any] = [
             "exercises": exercises,
@@ -59,7 +59,7 @@ public struct KinesteXAIKit {
         user: UserDetails?,
         isLoading: Binding<Bool>,
         customParams: [String: Any] = [:],
-        onMessageReceived: @escaping (WebViewMessage) -> Void
+        onMessageReceived: @escaping (KinestexMessage) -> Void
     ) -> AnyView {
         let safePlan = plan.addingPercentEncoding(withAllowedCharacters: .urlPathAllowed) ?? plan
         return makeView(
@@ -79,7 +79,7 @@ public struct KinesteXAIKit {
         user: UserDetails?,
         isLoading: Binding<Bool>,
         customParams: [String: Any] = [:],
-        onMessageReceived: @escaping (WebViewMessage) -> Void
+        onMessageReceived: @escaping (KinestexMessage) -> Void
     ) -> AnyView {
         let safeWorkout = workout.addingPercentEncoding(withAllowedCharacters: .urlPathAllowed) ?? workout
         return makeView(
@@ -100,7 +100,7 @@ public struct KinesteXAIKit {
         user: UserDetails?,
         isLoading: Binding<Bool>,
         customParams: [String: Any] = [:],
-        onMessageReceived: @escaping (WebViewMessage) -> Void
+        onMessageReceived: @escaping (KinestexMessage) -> Void
     ) -> AnyView {
         let defaultData: [String: Any] = [
             "exercise": exercise,
@@ -125,7 +125,7 @@ public struct KinesteXAIKit {
         user: UserDetails?,
         isLoading: Binding<Bool>,
         customParams: [String: Any] = [:],
-        onMessageReceived: @escaping (WebViewMessage) -> Void
+        onMessageReceived: @escaping (KinestexMessage) -> Void
     ) -> AnyView {
         let defaultData: [String: Any] = [
             "countdown": duration,
@@ -149,7 +149,7 @@ public struct KinesteXAIKit {
         user: UserDetails?,
         isLoading: Binding<Bool>,
         customParams: [String: Any] = [:],
-        onMessageReceived: @escaping (WebViewMessage) -> Void
+        onMessageReceived: @escaping (KinestexMessage) -> Void
     ) -> AnyView {
         let defaultData: [String: Any] = [
             "exercise": exercise,
@@ -206,7 +206,7 @@ public struct KinesteXAIKit {
         user: UserDetails?,
         customParams: [String: Any],
         isLoading: Binding<Bool>,
-        onMessageReceived: @escaping (WebViewMessage) -> Void,
+        onMessageReceived: @escaping (KinestexMessage) -> Void,
         currentExercise: Binding<String?>? = nil,
         currentRestSpeech: Binding<String?>? = nil
     ) -> AnyView {

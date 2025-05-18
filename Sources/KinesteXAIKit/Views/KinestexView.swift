@@ -8,7 +8,7 @@ public struct KinestexView: View {
     let url: URL
     let data: [String: Any]?
     @Binding var isLoading: Bool
-    let onMessageReceived: (WebViewMessage) -> Void
+    let onMessageReceived: (KinestexMessage) -> Void
     @StateObject private var webViewState = WebViewState()
     @Binding var currentExercise: String?
     @Binding var currentRestSpeech: String?
@@ -20,7 +20,7 @@ public struct KinestexView: View {
         url: URL,
         data: [String: Any]?,
         isLoading: Binding<Bool>,
-        onMessageReceived: @escaping (WebViewMessage) -> Void,
+        onMessageReceived: @escaping (KinestexMessage) -> Void,
         currentExercise: Binding<String?>,
         currentRestSpeech: Binding<String?>
     ) {
