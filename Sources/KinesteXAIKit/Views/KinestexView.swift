@@ -1,7 +1,7 @@
 import SwiftUI
 import WebKit
 
-public struct KinestexView: View {
+struct KinestexView: View {
     let apiKey: String
     let companyName: String
     let userId: String
