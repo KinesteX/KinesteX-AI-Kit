@@ -15,7 +15,7 @@ public struct WebViewWrapperView: View {
     let userId: String
     let data: [String: Any]?
     @Binding var isLoading: Bool
-    let onMessageReceived: (WebViewMessage) -> Void
+    let onMessageReceived: (KinestexMessage) -> Void
     @ObservedObject var webViewState: WebViewState
     
     public var body: some View {
@@ -47,14 +47,14 @@ public struct WebViewWrapperView: View {
 
 // Cross-platform WebView wrapper
 #if os(iOS) || targetEnvironment(macCatalyst)
-public struct WebViewWrapper: UIViewRepresentable {
+struct WebViewWrapper: UIViewRepresentable {
     let url: URL
     let apiKey: String
     let companyName: String
     let userId: String
     let data: [String: Any]?
     @Binding var isLoading: Bool
-    let onMessageReceived: (WebViewMessage) -> Void
+    let onMessageReceived: (KinestexMessage) -> Void
     @ObservedObject var webViewState: WebViewState
     
     public func makeUIView(context: Context) -> WKWebView {
@@ -110,7 +110,7 @@ public struct WebViewWrapper: UIViewRepresentable {
     public class Coordinator: NSObject, WKNavigationDelegate, WKScriptMessageHandler, WKUIDelegate {
         let isLoading: Binding<Bool>
         let webViewState: WebViewState
-        let onMessageReceived: (WebViewMessage) -> Void
+        let onMessageReceived: (KinestexMessage) -> Void
         let apiKey: String
         let companyName: String
         let userId: String
@@ -120,7 +120,7 @@ public struct WebViewWrapper: UIViewRepresentable {
         init(
             isLoading: Binding<Bool>,
             webViewState: WebViewState,
-            onMessageReceived: @escaping (WebViewMessage) -> Void,
+            onMessageReceived: @escaping (KinestexMessage) -> Void,
             apiKey: String,
             companyName: String,
             userId: String,
@@ -187,7 +187,7 @@ public struct WebViewWrapper: UIViewRepresentable {
                let data = messageBody.data(using: .utf8),
                let json = try? JSONSerialization.jsonObject(with: data, options: []) as? [String: Any],
                let type = json["type"] as? String {
-                let webViewMessage: WebViewMessage
+                let webViewMessage: KinestexMessage
                 switch type {
                 case "kinestex_launched":
                     webViewMessage = .kinestex_launched(json)
@@ -257,7 +257,7 @@ public struct WebViewWrapper: NSViewRepresentable {
     let userId: String
     let data: [String: Any]?
     @Binding var isLoading: Bool
-    let onMessageReceived: (WebViewMessage) -> Void
+    let onMessageReceived: (KinestexMessage) -> Void
     @ObservedObject var webViewState: WebViewState
     
     public func makeNSView(context: Context) -> WKWebView {
@@ -333,7 +333,7 @@ public struct WebViewWrapper: NSViewRepresentable {
                let data = messageBody.data(using: .utf8),
                let json = try? JSONSerialization.jsonObject(with: data, options: []) as? [String: Any],
                let type = json["type"] as? String {
-                let webViewMessage: WebViewMessage
+                let webViewMessage: KinestexMessage
                 switch type {
                 case "kinestex_launched": webViewMessage = .kinestex_launched(json)
                 case "finished_workout": webViewMessage = .finished_workout(json)

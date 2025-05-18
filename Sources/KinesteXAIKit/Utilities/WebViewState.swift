@@ -9,7 +9,7 @@
 import WebKit
 import Combine
 
-public class WebViewState: ObservableObject {
+class WebViewState: ObservableObject {
     @Published var webView: WKWebView?
     
     deinit {

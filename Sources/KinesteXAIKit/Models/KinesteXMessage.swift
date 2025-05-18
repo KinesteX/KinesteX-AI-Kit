@@ -6,7 +6,7 @@
 //
 
 
-public enum WebViewMessage {
+public enum KinestexMessage {
     case kinestex_launched([String: Any])
     case finished_workout([String: Any])
     case error_occurred([String: Any])
