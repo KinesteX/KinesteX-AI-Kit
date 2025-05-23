@@ -26,3 +26,26 @@ public enum Gender {
            self.lifestyle = lifestyle
        }
    }
+
+public enum PlanCategory: Equatable {
+    case Cardio
+    case WeightManagement
+    case Strength
+    case Rehabilitation
+    case Custom(String)
+
+    // Optional: Implement the Equatable conformance manually if needed
+    public static func == (lhs: PlanCategory, rhs: PlanCategory) -> Bool {
+        switch (lhs, rhs) {
+        case (.Cardio, .Cardio),
+             (.WeightManagement, .WeightManagement),
+             (.Strength, .Strength),
+             (.Rehabilitation, .Rehabilitation):
+            return true
+        case let (.Custom(lhsValue), .Custom(rhsValue)):
+            return lhsValue == rhsValue
+        default:
+            return false
+        }
+    }
+}
