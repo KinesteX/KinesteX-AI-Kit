@@ -91,7 +91,7 @@ public class APIService {
                 return try await parseResponse(
                     data: data,
                     contentType: contentType,
-                    isList: category != nil || bodyParts != nil,
+                    isList: id == nil && title == nil,
                     rawData: rawData
                 )
             } else {
@@ -188,7 +188,7 @@ public class APIService {
                 }
             }
         } catch {
-            let msg = "Failed to parse \(contentType.rawValue): \(error.localizedDescription)"
+            let msg = "Failed to parse \(contentType.rawValue): \(error)"
             print("⚠️ KinesteX: \(msg)")
             if let raw = jsonData {
                 print("⚠️ KinesteX: raw JSON:", raw)

@@ -39,16 +39,16 @@ public struct WorkoutModel: Codable, Identifiable, RawDataCapturing {
     
     public init(from decoder: Decoder) throws {
         let container = try decoder.container(keyedBy: CodingKeys.self)
-        id = try container.decode(String.self, forKey: .id)
-        title = try container.decode(String.self, forKey: .title)
-        imgURL = try container.decode(String.self, forKey: .imgURL)
-        category = try container.decodeIfPresent(String.self, forKey: .category)
-        description = try container.decode(String.self, forKey: .description)
-        totalMinutes = try container.decodeIfPresent(Int.self, forKey: .totalMinutes)
-        totalCalories = try container.decodeIfPresent(Int.self, forKey: .totalCalories)
-        bodyParts = try container.decode([String].self, forKey: .bodyParts)
-        difficultyLevel = try container.decodeIfPresent(String.self, forKey: .difficultyLevel)
-        sequence = try container.decode([ExerciseModel].self, forKey: .sequence)
+        id = (try? container.decode(String.self, forKey: .id)) ?? "NA"
+        title = (try? container.decode(String.self, forKey: .title)) ?? "Untitled Workout"
+        imgURL = (try? container.decode(String.self, forKey: .imgURL)) ?? ""
+        category = try? container.decodeIfPresent(String.self, forKey: .category)
+        description = (try? container.decode(String.self, forKey: .description)) ?? ""
+        totalMinutes = try? container.decodeIfPresent(Int.self, forKey: .totalMinutes)
+        totalCalories = try? container.decodeIfPresent(Int.self, forKey: .totalCalories)
+        bodyParts = (try? container.decode([String].self, forKey: .bodyParts)) ?? []
+        difficultyLevel = try? container.decodeIfPresent(String.self, forKey: .difficultyLevel)
+        sequence = (try? container.decode([ExerciseModel].self, forKey: .sequence)) ?? []
     }
 }
 
@@ -94,7 +94,7 @@ public struct ExerciseModel: Codable, Identifiable, RawDataCapturing {
         case thumbnailURL = "thumbnail_URL"
         case videoURL = "video_URL"
         case workoutCountdown = "workout_countdown"
-        case workoutReps = "workout_reps"
+        case workoutReps = "workout_repeats"
         case averageReps = "avg_reps"
         case averageCountdown = "avg_countdown"
         case restDuration = "rest_duration"
@@ -113,9 +113,11 @@ public struct ExerciseModel: Codable, Identifiable, RawDataCapturing {
         let container = try decoder.container(keyedBy: CodingKeys.self)
         
         id = (try? container.decode(String.self, forKey: .id)) ?? "NA"
-        title = try container.decode(String.self, forKey: .title)
+        title = (try? container.decode(String.self, forKey: .title)) ?? "Untitled Exercise"
         thumbnailURL = (try? container.decode(String.self, forKey: .thumbnailURL)) ?? ""
         videoURL = (try? container.decode(String.self, forKey: .videoURL)) ?? ""
+        maleVideoURL = (try? container.decode(String.self, forKey: .maleVideoURL)) ?? ""
+        maleThumbnailURL = (try? container.decode(String.self, forKey: .maleThumbnailURL)) ?? ""
         workoutCountdown = try? container.decodeIfPresent(Int.self, forKey: .workoutCountdown)
         workoutReps = try? container.decodeIfPresent(Int.self, forKey: .workoutReps)
         averageReps = try? container.decodeIfPresent(Int.self, forKey: .averageReps)
@@ -131,8 +133,6 @@ public struct ExerciseModel: Codable, Identifiable, RawDataCapturing {
         steps = (try? container.decode([String].self, forKey: .steps)) ?? []
         tips = (try? container.decode(String.self, forKey: .tips)) ?? ""
         modelId = (try? container.decode(String.self, forKey: .modelId)) ?? "NA"
-        maleVideoURL = (try? container.decode(String.self, forKey: .maleVideoURL)) ?? "NA"
-        maleThumbnailURL = (try? container.decode(String.self, forKey: .maleThumbnailURL)) ?? "NA"
     }
 }
 
