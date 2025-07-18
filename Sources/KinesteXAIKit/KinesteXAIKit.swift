@@ -111,6 +111,31 @@ public struct KinesteXAIKit {
             onMessageReceived: onMessageReceived
         )
     }
+    /// Launches personalized plan view (beta preview).  Please contact KinesteX for access
+    ///
+    /// - Parameters:
+    ///   - user: Optional user details like height, age, weight, lifestyle, gender
+    ///   - isLoading: Variable flag to inform you of the loading state changes
+    ///   - customParams: Custom params for advanced configuration
+    ///   - onMessageReceived: Callback function to react to events in KinesteX
+    ///
+    /// - Returns: A webview page with personalized plan that remembers user's state based on userId
+    /// Launches personalized plan view (beta preview).  Please contact KinesteX for access
+    public func createPersonalizedPlanView(
+        user: UserDetails?,
+        isLoading: Binding<Bool>,
+        customParams: [String: Any] = [:],
+        onMessageReceived: @escaping (KinestexMessage) -> Void
+    ) -> AnyView {
+        return makeView(
+            endpoint: "personalized-plan",
+            defaultData: [:],
+            user: user,
+            customParams: customParams,
+            isLoading: isLoading,
+            onMessageReceived: onMessageReceived
+        )
+    }
     
     public func createCategoryView(
         planCategory: PlanCategory = .Cardio,
