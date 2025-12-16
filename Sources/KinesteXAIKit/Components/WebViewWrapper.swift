@@ -156,6 +156,11 @@ struct WebViewWrapper: UIViewRepresentable {
             return .grant
         }
         
+        @available(iOS 15.0, *)
+        public func webView(_ webView: WKWebView, requestDeviceOrientationAndMotionPermissionFor origin: WKSecurityOrigin, initiatedByFrame frame: WKFrameInfo, decisionHandler: @escaping @MainActor (WKPermissionDecision) -> Void) {
+            decisionHandler(.grant)
+        }
+        
         public func webView(_ webView: WKWebView, didStartProvisionalNavigation navigation: WKNavigation!) {
             if !isLoading.wrappedValue {
                 isLoading.wrappedValue = true
