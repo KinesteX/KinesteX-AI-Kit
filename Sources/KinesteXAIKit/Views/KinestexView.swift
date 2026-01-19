@@ -9,9 +9,12 @@ struct KinestexView: View {
     let data: [String: Any]?
     @Binding var isLoading: Bool
     let onMessageReceived: (KinestexMessage) -> Void
-    @StateObject private var webViewState = WebViewState()
+    @StateObject private var _webViewState = WebViewState()
     @Binding var currentExercise: String?
     @Binding var currentRestSpeech: String?
+    
+    // Expose webViewState for sendAction functionality
+    var webViewState: WebViewState { _webViewState }
     
     public init(
         apiKey: String,
@@ -45,7 +48,7 @@ struct KinestexView: View {
                 data: data,
                 isLoading: $isLoading,
                 onMessageReceived: onMessageReceived,
-                webViewState: webViewState
+                webViewState: _webViewState
             )
             if isLoading {
                 Color.black
@@ -64,7 +67,7 @@ struct KinestexView: View {
         }
         .onDisappear {
             print("🗑️ KinesteX: cleaning up...")
-            guard let webView = webViewState.webView else {
+            guard let webView = _webViewState.webView else {
                 print("⚠️ KinesteX: No web view to clean up")
                 return
             }
@@ -131,7 +134,7 @@ struct KinestexView: View {
                     webView.configuration.userContentController.removeAllScriptMessageHandlers()
                     webView.configuration.userContentController.removeAllUserScripts()
                     
-                    webViewState.webView = nil
+                    _webViewState.webView = nil
                     print("✅ KinesteX: cleaned up and set webView to nil")
                 }
             }
@@ -139,7 +142,7 @@ struct KinestexView: View {
     }
     
     private func updateCurrentExercise(_ exercise: String?) {
-        guard let webView = webViewState.webView else {
+        guard let webView = _webViewState.webView else {
             print("⚠️ KinesteX: WebView is not available")
             return
         }
@@ -160,7 +163,7 @@ struct KinestexView: View {
     }
     
     private func updateCurrentRestSpeech(_ restSpeech: String?) { // Now accepts String?
-        guard let webView = webViewState.webView else {
+        guard let webView = _webViewState.webView else {
             print("⚠️ KinesteX: WebView is not available")
             return
         }

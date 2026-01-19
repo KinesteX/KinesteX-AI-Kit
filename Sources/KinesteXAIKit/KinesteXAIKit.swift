@@ -8,6 +8,9 @@ public struct KinesteXAIKit {
     public var apiKey: String
     public var companyName: String
     public var userId: String
+    
+    // MARK: - WebView State Management
+    private static var globalWebViewState: WebViewState?
     public init(
         baseURL: URL? = nil,
         apiKey: String,
@@ -286,6 +289,86 @@ public struct KinesteXAIKit {
         )
     }
     
+    public func createCustomWorkoutView(
+        exercises: [WorkoutSequenceExercise],
+        user: UserDetails?,
+        isLoading: Binding<Bool>,
+        customParams: [String: Any] = [:],
+        onMessageReceived: @escaping (KinestexMessage) -> Void
+    ) -> AnyView {
+        let normalized = normalizeWorkoutExercises(exercises)
+        
+        print(normalized)
+        
+        let defaultData: [String: Any] = [
+            "customWorkoutExercises": normalized as Any
+        ]
+        
+        return makeView(
+            endpoint: "custom-workout",
+            defaultData: defaultData,
+            user: user,
+            customParams: customParams,
+            isLoading: isLoading,
+            onMessageReceived: onMessageReceived
+        )
+    }
+    
+    /// Builds the Admin Workout Editor view.
+    public func createAdminWorkoutEditor(
+        organization: String,
+        contentType: AdminContentType? = nil,
+        contentId: String? = nil,
+        customQueries: [String: String]? = nil,
+        isLoading: Binding<Bool>,
+        customParams: [String: Any] = [:],
+        onMessageReceived: @escaping (KinestexMessage) -> Void
+    ) -> AnyView {
+        // 1 Base admin URL
+        var url = URL(string: "https://admin.kinestex.com")!
+        
+        if let type = contentType, let id = contentId {
+            url.appendPathComponent(type.segment)
+            url.appendPathComponent(id)
+        } else {
+            url.appendPathComponent("main")
+        }
+
+        // 3 Add query parameters
+        var components = URLComponents(url: url, resolvingAgainstBaseURL: false)!
+        var queryItems = [
+            URLQueryItem(name: "isCustomAuth", value: "true"),
+            URLQueryItem(name: "hideSidebar", value: "true")
+        ]
+        
+        if let queries = customQueries {
+            for (k, v) in queries {
+                queryItems.append(URLQueryItem (name: k, value: v))
+            }
+        }
+
+        components.queryItems = queryItems
+        let fullURLString = components.url!.absoluteString
+        
+        // 4 Default payload
+        let defaultData: [String: Any] = [
+            "organization": organization,
+            "apiKey": apiKey,
+            "companyName": companyName
+        ]
+        
+        // 5 Call makeView with the full URL as endpoint
+        return makeView(
+            endpoint: fullURLString,
+            defaultData: defaultData,
+            user: nil,
+            customParams: customParams,
+            isLoading: isLoading,
+            onMessageReceived: onMessageReceived,
+            useCustomURL: true
+        )
+    }
+    
     
     private func preparePayload(
         defaultData: [String: Any],
@@ -320,6 +403,93 @@ public struct KinesteXAIKit {
         return merged
     }
     
+    // MARK: - Send Action Methods
+    
+    /// Sets the global WebView state for static sendAction method
+    public static func setGlobalWebViewState(_ state: WebViewState) {
+        globalWebViewState = state
+        print("🔄 KinesteX: Global WebView state updated, webView is \(state.webView != nil ? "ready" : "not ready")")
+    }
+    
+    /// Check if the WebView is ready to receive actions
+    /// - Returns: True if actions can be sent, false otherwise
+    public static func isWebViewReady() -> Bool {
+        return globalWebViewState?.webView != nil
+    }
+    
+    /// Wait for WebView to be ready with a timeout
+    /// - Parameters:
+    ///   - timeout: Maximum time to wait in seconds (default: 5.0)
+    ///   - completion: Called when WebView is ready or timeout occurs
+    public static func waitForWebViewReady(timeout: TimeInterval = 5.0, completion: @escaping (Bool) -> Void) {
+        let startTime = Date()
+        
+        func checkReadiness() {
+            if isWebViewReady() {
+                completion(true)
+                return
+            }
+            
+            if Date().timeIntervalSince(startTime) > timeout {
+                print("⏰ KinesteX: WebView ready timeout after \(timeout) seconds")
+                completion(false)
+                return
+            }
+            
+            DispatchQueue.main.asyncAfter(deadline: .now() + 0.1) {
+                checkReadiness()
+            }
+        }
+        
+        checkReadiness()
+    }
+    
+    /// Static method to send actions through the global WebView
+    /// - Parameters:
+    ///   - action: The action key (e.g., "workout_activity_action")
+    ///   - value: The action value (e.g., "start", "pause", "stop")
+    public static func sendAction(_ action: String, value: String) {
+        // Enhanced debugging to understand the state
+        if globalWebViewState == nil {
+            print("⚠️ KinesteX: Cannot send action - Global WebView state is nil")
+            print("💡 KinesteX: Make sure a KinesteX view is currently displayed")
+            return
+        }
+        
+        guard let webView = globalWebViewState?.webView else {
+            print("⚠️ KinesteX: Cannot send action - WebView not ready or not set")
+            print("💡 KinesteX: WebView state exists but webView is nil - likely still loading")
+            return
+        }
+        
+        guard !action.isEmpty else {
+            print("⚠️ KinesteX: Action type is required")
+            return
+        }
+        
+        guard !value.isEmpty else {
+            print("⚠️ KinesteX: Action value is required")
+            return
+        }
+        
+        let script = """
+        (function() {
+            const message = { '\(action)': '\(value)' };
+            window.postMessage(message, '*');
+        })();
+        """
+        
+        print("📤 KinesteX: Sending action: \(action) = \(value)")
+        
+        webView.evaluateJavaScript(script) { _, error in
+            if let error = error {
+                print("⚠️ KinesteX: Failed to send action - \(error.localizedDescription)")
+            } else {
+                print("✅ KinesteX: Action sent successfully")
+            }
+        }
+    }
+    
     /// Builds the KinestexView or returns an EmptyView on failure.
     @MainActor
     private func makeView(
@@ -330,7 +500,8 @@ public struct KinesteXAIKit {
         isLoading: Binding<Bool>,
         onMessageReceived: @escaping (KinestexMessage) -> Void,
         currentExercise: Binding<String?>? = nil,
-        currentRestSpeech: Binding<String?>? = nil
+        currentRestSpeech: Binding<String?>? = nil,
+        useCustomURL: Bool = false
     ) -> AnyView {
         guard let payload = preparePayload(
             defaultData: defaultData,
@@ -340,20 +511,28 @@ public struct KinesteXAIKit {
             return AnyView(EmptyView())
         }
         
-        let url = baseURL.appendingPathComponent(endpoint)
-        return AnyView(
-            KinestexView(
-                apiKey: apiKey,
-                companyName: companyName,
-                userId: userId,
-                url: url,
-                data: payload,
-                isLoading: isLoading,
-                onMessageReceived: onMessageReceived,
-                currentExercise: currentExercise ?? .constant(nil),
-                currentRestSpeech: currentRestSpeech ?? .constant(nil)
-            )
+        let url: URL
+        if useCustomURL {
+            // When useCustomURL is true, treat endpoint as a full URL string
+            url = URL(string: endpoint) ?? baseURL
+        } else {
+            // Default behavior: append endpoint to baseURL
+            url = baseURL.appendingPathComponent(endpoint)
+        }
+        
+        let kinestexView = KinestexView(
+            apiKey: apiKey,
+            companyName: companyName,
+            userId: userId,
+            url: url,
+            data: payload,
+            isLoading: isLoading,
+            onMessageReceived: onMessageReceived,
+            currentExercise: currentExercise ?? .constant(nil),
+            currentRestSpeech: currentRestSpeech ?? .constant(nil)
         )
+        
+        return AnyView(kinestexView)
     }
     
     
