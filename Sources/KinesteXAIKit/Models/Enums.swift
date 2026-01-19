@@ -42,3 +42,24 @@ public enum APIContentResult {
     case error(String)
     case rawData([String: Any], String?) // Raw data with optional error message
 }
+
+/// AdminContentType defines the types of content for admin functionality.
+public enum AdminContentType: String, CaseIterable, Identifiable {
+    case workout = "workout"
+    case plan = "plan"
+    case exercise = "exercise"
+    
+    public var id: String { self.rawValue }
+    
+    /// Returns the URL segment for the admin content type
+    public var segment: String {
+        switch self {
+        case .workout:
+            return "workouts"
+        case .plan:
+            return "plans"
+        case .exercise:
+            return "exercises"
+        }
+    }
+}

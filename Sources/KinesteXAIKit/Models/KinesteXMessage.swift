@@ -24,4 +24,5 @@ public enum KinestexMessage {
     case exercise_overview([String: Any])
     case workout_completed([String: Any])
     case kinestex_loaded([String: Any])
+    case all_resources_loaded([String: Any])
 }
