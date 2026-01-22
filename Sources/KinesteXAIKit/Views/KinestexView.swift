@@ -9,7 +9,9 @@ struct KinestexView: View {
     let data: [String: Any]?
     @Binding var isLoading: Bool
     let onMessageReceived: (KinestexMessage) -> Void
+    let style: IStyle?
     @StateObject private var _webViewState = WebViewState()
+    @State private var showOverlay: Bool = true
     @Binding var currentExercise: String?
     @Binding var currentRestSpeech: String?
     
@@ -25,7 +27,8 @@ struct KinestexView: View {
         isLoading: Binding<Bool>,
         onMessageReceived: @escaping (KinestexMessage) -> Void,
         currentExercise: Binding<String?>,
-        currentRestSpeech: Binding<String?>
+        currentRestSpeech: Binding<String?>,
+        style: IStyle?,
     ) {
         self.apiKey = apiKey
         self.companyName = companyName
@@ -36,6 +39,7 @@ struct KinestexView: View {
         self.onMessageReceived = onMessageReceived
         self._currentExercise = currentExercise
         self._currentRestSpeech = currentRestSpeech
+        self.style = style
     }
     
     public var body: some View {
@@ -47,11 +51,26 @@ struct KinestexView: View {
                 userId: userId,
                 data: data,
                 isLoading: $isLoading,
-                onMessageReceived: onMessageReceived,
+                onMessageReceived: { message in
+                    switch message {
+                    case .kinestex_loaded(let data):
+                        DispatchQueue.main.asyncAfter(deadline: .now() + 0.35) {
+                            self.showOverlay = false
+                        }
+                        break
+                        
+                    default:
+                        break
+                    }
+                    onMessageReceived(message)
+                },
                 webViewState: _webViewState
             )
-            if isLoading {
-                Color.black
+//            if isLoading {
+//                KinestexOverlayView(style: style)
+//            }
+            if showOverlay {
+                KinestexOverlayView(style: style)
             }
         }
         .background(Color.black)
@@ -181,5 +200,14 @@ struct KinestexView: View {
                 print("✅ KinesteX: Successfully updated rest speech to: \(restSpeech ?? "NA")")
             }
         }
+    }
+}
+
+struct KinestexOverlayView: View {
+    let style: IStyle?
+
+    var body: some View {
+        Color.fromHex(style?.loadingBackgroundColor ?? "000000")
+        .ignoresSafeArea()
     }
 }

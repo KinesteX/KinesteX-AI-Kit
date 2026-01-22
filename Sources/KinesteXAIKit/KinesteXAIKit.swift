@@ -69,6 +69,7 @@ public struct KinesteXAIKit {
         currentExercise: Binding<String>,
         currentRestSpeech: Binding<String?>? = nil,
         user: UserDetails?,
+        style: IStyle?,
         isLoading: Binding<Bool>,
         customParams: [String: Any] = [:],
         onMessageReceived: @escaping (KinestexMessage) -> Void
@@ -92,7 +93,8 @@ public struct KinesteXAIKit {
             isLoading: isLoading,
             onMessageReceived: onMessageReceived,
             currentExercise: nullableCurrentExercise,
-            currentRestSpeech: currentRestSpeech
+            currentRestSpeech: currentRestSpeech,
+            style: style,
         )
     }
     
@@ -100,6 +102,7 @@ public struct KinesteXAIKit {
     public func createPlanView(
         plan: String,
         user: UserDetails?,
+        style: IStyle?,
         isLoading: Binding<Bool>,
         customParams: [String: Any] = [:],
         onMessageReceived: @escaping (KinestexMessage) -> Void
@@ -111,7 +114,8 @@ public struct KinesteXAIKit {
             user: user,
             customParams: customParams,
             isLoading: isLoading,
-            onMessageReceived: onMessageReceived
+            onMessageReceived: onMessageReceived,
+            style: style,
         )
     }
     /// Launches personalized plan view (beta preview).  Please contact KinesteX for access
@@ -126,6 +130,7 @@ public struct KinesteXAIKit {
     /// Launches personalized plan view (beta preview).  Please contact KinesteX for access
     public func createPersonalizedPlanView(
         user: UserDetails?,
+        style: IStyle?,
         isLoading: Binding<Bool>,
         customParams: [String: Any] = [:],
         onMessageReceived: @escaping (KinestexMessage) -> Void
@@ -136,13 +141,15 @@ public struct KinesteXAIKit {
             user: user,
             customParams: customParams,
             isLoading: isLoading,
-            onMessageReceived: onMessageReceived
+            onMessageReceived: onMessageReceived,
+            style: style,
         )
     }
     
     public func createCategoryView(
         planCategory: PlanCategory = .Cardio,
         user: UserDetails?,
+        style: IStyle?,
         isLoading: Binding<Bool>,
         customParams: [String: Any] = [:],
         onMessageReceived: @escaping (KinestexMessage) -> Void
@@ -161,7 +168,9 @@ public struct KinesteXAIKit {
                     user: user,
                     customParams: customParams,
                     isLoading: isLoading,
-                    onMessageReceived: onMessageReceived)
+                    onMessageReceived: onMessageReceived,
+                    style: style,
+        )
     }
     
     public func createHowToView(
@@ -204,6 +213,7 @@ public struct KinesteXAIKit {
     public func createWorkoutView(
         workout: String,
         user: UserDetails?,
+        style: IStyle?,
         isLoading: Binding<Bool>,
         customParams: [String: Any] = [:],
         onMessageReceived: @escaping (KinestexMessage) -> Void
@@ -215,7 +225,8 @@ public struct KinesteXAIKit {
             user: user,
             customParams: customParams,
             isLoading: isLoading,
-            onMessageReceived: onMessageReceived
+            onMessageReceived: onMessageReceived,
+            style: style,
         )
     }
     
@@ -224,6 +235,7 @@ public struct KinesteXAIKit {
         duration: Int,
         showLeaderboard: Bool = true,
         user: UserDetails?,
+        style: IStyle?,
         isLoading: Binding<Bool>,
         customParams: [String: Any] = [:],
         onMessageReceived: @escaping (KinestexMessage) -> Void
@@ -240,6 +252,7 @@ public struct KinesteXAIKit {
             customParams: customParams,
             isLoading: isLoading,
             onMessageReceived: onMessageReceived,
+            style: style,
         )
     }
     
@@ -249,6 +262,7 @@ public struct KinesteXAIKit {
         exercise: String,
         duration: Int = 60,
         user: UserDetails?,
+        style: IStyle?,
         isLoading: Binding<Bool>,
         customParams: [String: Any] = [:],
         onMessageReceived: @escaping (KinestexMessage) -> Void
@@ -265,12 +279,14 @@ public struct KinesteXAIKit {
             customParams: customParams,
             isLoading: isLoading,
             onMessageReceived: onMessageReceived,
+            style: style,
         )
     }
     
     public func createLeaderboardView(
         exercise: String,
         username: String = "",
+        style: IStyle?,
         isLoading: Binding<Bool>,
         customParams: [String: Any] = [:],
         onMessageReceived: @escaping (KinestexMessage) -> Void
@@ -286,12 +302,14 @@ public struct KinesteXAIKit {
             customParams: customParams,
             isLoading: isLoading,
             onMessageReceived: onMessageReceived,
+            style: style,
         )
     }
     
     public func createCustomWorkoutView(
         exercises: [WorkoutSequenceExercise],
         user: UserDetails?,
+        style: IStyle?,
         isLoading: Binding<Bool>,
         customParams: [String: Any] = [:],
         onMessageReceived: @escaping (KinestexMessage) -> Void
@@ -310,13 +328,15 @@ public struct KinesteXAIKit {
             user: user,
             customParams: customParams,
             isLoading: isLoading,
-            onMessageReceived: onMessageReceived
+            onMessageReceived: onMessageReceived,
+            style: style,
         )
     }
     
     /// Builds the Admin Workout Editor view.
     public func createAdminWorkoutEditor(
         organization: String,
+        style: IStyle?,
         contentType: AdminContentType? = nil,
         contentId: String? = nil,
         customQueries: [String: String]? = nil,
@@ -365,7 +385,8 @@ public struct KinesteXAIKit {
             customParams: customParams,
             isLoading: isLoading,
             onMessageReceived: onMessageReceived,
-            useCustomURL: true
+            useCustomURL: true,
+            style: style,
         )
     }
     
@@ -501,7 +522,8 @@ public struct KinesteXAIKit {
         onMessageReceived: @escaping (KinestexMessage) -> Void,
         currentExercise: Binding<String?>? = nil,
         currentRestSpeech: Binding<String?>? = nil,
-        useCustomURL: Bool = false
+        useCustomURL: Bool = false,
+        style: IStyle?
     ) -> AnyView {
         guard let payload = preparePayload(
             defaultData: defaultData,
@@ -511,14 +533,17 @@ public struct KinesteXAIKit {
             return AnyView(EmptyView())
         }
         
-        let url: URL
+        let base: URL
         if useCustomURL {
             // When useCustomURL is true, treat endpoint as a full URL string
-            url = URL(string: endpoint) ?? baseURL
+            base = URL(string: endpoint) ?? baseURL
         } else {
             // Default behavior: append endpoint to baseURL
-            url = baseURL.appendingPathComponent(endpoint)
+            base = baseURL.appendingPathComponent(endpoint)
         }
+        
+        let url = UrlHelper.appendStyle(to: base, style: style)
+        print("URL:", url)
         
         let kinestexView = KinestexView(
             apiKey: apiKey,
@@ -529,7 +554,8 @@ public struct KinesteXAIKit {
             isLoading: isLoading,
             onMessageReceived: onMessageReceived,
             currentExercise: currentExercise ?? .constant(nil),
-            currentRestSpeech: currentRestSpeech ?? .constant(nil)
+            currentRestSpeech: currentRestSpeech ?? .constant(nil),
+            style: style
         )
         
         return AnyView(kinestexView)
