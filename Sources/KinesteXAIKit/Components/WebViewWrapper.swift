@@ -6,6 +6,7 @@ class DebugWKWebView: WKWebView {
         print("🗑️ KinesteX: WebView deinitialized")
     }
 }
+
 // Cross-platform WebView wrapper view
 @available(iOS 13.0, macOS 10.15, *)
 struct WebViewWrapperView: View {
@@ -84,7 +85,7 @@ struct WebViewWrapper: UIViewRepresentable {
         webView.load(URLRequest(url: url))
         
         DispatchQueue.main.async {
-            webViewState.webView = webView
+            self.webViewState.webView = webView
         }
         
         return webView
@@ -285,8 +286,6 @@ public struct WebViewWrapper: NSViewRepresentable {
         
         DispatchQueue.main.async {
             self.webViewState.webView = webView
-            // Update global state when webView is actually ready (macOS)
-            KinesteXAIKit.setGlobalWebViewState(self.webViewState)
         }
         
         return webView

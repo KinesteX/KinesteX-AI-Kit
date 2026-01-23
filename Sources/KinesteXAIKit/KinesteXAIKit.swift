@@ -309,7 +309,7 @@ public struct KinesteXAIKit {
         user: UserDetails?,
         style: IStyle?,
         isLoading: Binding<Bool>,
-        workoutAction: Binding<WorkoutActivityAction?>,
+        workoutAction: Binding<[String: Any]?>,
         customParams: [String: Any] = [:],
         onMessageReceived: @escaping (KinestexMessage) -> Void
     ) -> AnyView {
@@ -345,8 +345,12 @@ public struct KinesteXAIKit {
         onMessageReceived: @escaping (KinestexMessage) -> Void
     ) -> AnyView {
         // 1 Base admin URL
-        var url = URL(string: "https://admin.kinestex.com")!
+        guard let baseUrl = URL(string: "https://admin.kinestex.com") else {
+            print("Invalid base URL")
+            return AnyView(EmptyView())
+        }
         
+        var url = baseURL
         if let type = contentType, let id = contentId {
             url.appendPathComponent(type.segment)
             url.appendPathComponent(id)
@@ -355,7 +359,10 @@ public struct KinesteXAIKit {
         }
 
         // 3 Add query parameters
-        var components = URLComponents(url: url, resolvingAgainstBaseURL: false)!
+        guard var components = URLComponents(url: url, resolvingAgainstBaseURL: false) else {
+            print("Failed to create URLComponents from \(url)")
+            return AnyView(EmptyView())
+        }
         var queryItems = [
             URLQueryItem(name: "isCustomAuth", value: "true"),
             URLQueryItem(name: "hideSidebar", value: "true")
@@ -368,7 +375,10 @@ public struct KinesteXAIKit {
         }
 
         components.queryItems = queryItems
-        let fullURLString = components.url!.absoluteString
+        guard let fullURLString = components.url else {
+            print("Failed to get URL from components")
+            return AnyView(EmptyView())
+        }
         
         // 4 Default payload
         let defaultData: [String: Any] = [
@@ -379,7 +389,7 @@ public struct KinesteXAIKit {
         
         // 5 Call makeView with the full URL as endpoint
         return makeView(
-            endpoint: fullURLString,
+            endpoint: fullURLString.absoluteString,
             defaultData: defaultData,
             user: nil,
             customParams: customParams,
@@ -435,7 +445,7 @@ public struct KinesteXAIKit {
         onMessageReceived: @escaping (KinestexMessage) -> Void,
         currentExercise: Binding<String?>? = nil,
         currentRestSpeech: Binding<String?>? = nil,
-        workoutAction: Binding<WorkoutActivityAction?>? = nil,
+        workoutAction: Binding<[String: Any]?>? = nil,
         useCustomURL: Bool = false,
         style: IStyle?
     ) -> AnyView {

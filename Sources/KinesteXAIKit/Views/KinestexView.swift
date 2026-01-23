@@ -1,5 +1,6 @@
 import SwiftUI
 import WebKit
+import Combine
 
 struct KinestexView: View {
     let apiKey: String
@@ -14,7 +15,7 @@ struct KinestexView: View {
     @State private var showOverlay: Bool = true
     @Binding var currentExercise: String?
     @Binding var currentRestSpeech: String?
-    @Binding var workoutAction: WorkoutActivityAction?
+    @Binding var workoutAction: [String: Any]?
     
     // Expose webViewState for sendAction functionality
     var webViewState: WebViewState { _webViewState }
@@ -29,7 +30,7 @@ struct KinestexView: View {
         onMessageReceived: @escaping (KinestexMessage) -> Void,
         currentExercise: Binding<String?>,
         currentRestSpeech: Binding<String?>,
-        workoutAction: Binding<WorkoutActivityAction?>,
+        workoutAction: Binding<[String: Any]?>,
         style: IStyle?,
     ) {
         self.apiKey = apiKey
@@ -87,11 +88,9 @@ struct KinestexView: View {
                 updateCurrentRestSpeech(restSpeech)
             }
         }
-        .onChange(of: workoutAction) { action in
-            guard let action else { return }
-            if(action == .start) {
-                updateWorkoutAction(action)
-            }
+        .onReceive(Just(workoutAction)) { newValue in
+            guard let action = newValue, !action.isEmpty else { return }
+            updateWorkoutAction(action)
         }
         .onDisappear {
             print("🗑️ KinesteX: cleaning up...")
@@ -211,22 +210,33 @@ struct KinestexView: View {
         }
     }
     
-    private func updateWorkoutAction(_ action: WorkoutActivityAction) {
+    private func updateWorkoutAction(_ action: [String: Any]) {
         guard let webView = _webViewState.webView else {
-            print("⚠️ KinesteX: WebView not ready")
-            return
-        }
-
-        let script = """
-        window.postMessage({ 'workout_activity_action': '\(action.rawValue)' }, '*');
-        """
-
-        webView.evaluateJavaScript(script) { _, error in
-            if let error = error {
-                print("⚠️ KinesteX: JS error: \(error.localizedDescription)")
-            } else {
-                print("✅ KinesteX: Workout action sent: \(action.rawValue)")
+                print("⚠️ KinesteX: WebView not ready")
+                return
             }
+        
+        do {
+            let jsonData = try JSONSerialization.data(withJSONObject: action)
+            guard let jsonString = String(data: jsonData, encoding: .utf8) else {
+                print("⚠️ KinesteX: Cannot convert payload to JSON string")
+                return
+            }
+            
+            let script = """
+            window.postMessage(\(jsonString), '*');
+            """
+            
+            webView.evaluateJavaScript(script) { _, error in
+                if let error {
+                    print("⚠️ KinesteX: Failed to send action payload: \(error)")
+                } else {
+                    print("→ Sent workout action payload: \(action)")
+                }
+            }
+        } catch {
+            print("⚠️ KinesteX: Failed to serialize action payload: \(error)")
+            return
         }
     }
 
