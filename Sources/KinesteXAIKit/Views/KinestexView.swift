@@ -14,6 +14,7 @@ struct KinestexView: View {
     @State private var showOverlay: Bool = true
     @Binding var currentExercise: String?
     @Binding var currentRestSpeech: String?
+    @Binding var workoutAction: WorkoutActivityAction?
     
     // Expose webViewState for sendAction functionality
     var webViewState: WebViewState { _webViewState }
@@ -28,6 +29,7 @@ struct KinestexView: View {
         onMessageReceived: @escaping (KinestexMessage) -> Void,
         currentExercise: Binding<String?>,
         currentRestSpeech: Binding<String?>,
+        workoutAction: Binding<WorkoutActivityAction?>,
         style: IStyle?,
     ) {
         self.apiKey = apiKey
@@ -39,6 +41,7 @@ struct KinestexView: View {
         self.onMessageReceived = onMessageReceived
         self._currentExercise = currentExercise
         self._currentRestSpeech = currentRestSpeech
+        self._workoutAction = workoutAction
         self.style = style
     }
     
@@ -82,6 +85,12 @@ struct KinestexView: View {
         .onChange(of: currentRestSpeech) { newValue in
             if let restSpeech = newValue {
                 updateCurrentRestSpeech(restSpeech)
+            }
+        }
+        .onChange(of: workoutAction) { action in
+            guard let action else { return }
+            if(action == .start) {
+                updateWorkoutAction(action)
             }
         }
         .onDisappear {
@@ -201,6 +210,26 @@ struct KinestexView: View {
             }
         }
     }
+    
+    private func updateWorkoutAction(_ action: WorkoutActivityAction) {
+        guard let webView = _webViewState.webView else {
+            print("⚠️ KinesteX: WebView not ready")
+            return
+        }
+
+        let script = """
+        window.postMessage({ 'workout_activity_action': '\(action.rawValue)' }, '*');
+        """
+
+        webView.evaluateJavaScript(script) { _, error in
+            if let error = error {
+                print("⚠️ KinesteX: JS error: \(error.localizedDescription)")
+            } else {
+                print("✅ KinesteX: Workout action sent: \(action.rawValue)")
+            }
+        }
+    }
+
 }
 
 struct KinestexOverlayView: View {

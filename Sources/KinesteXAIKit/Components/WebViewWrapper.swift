@@ -84,9 +84,7 @@ struct WebViewWrapper: UIViewRepresentable {
         webView.load(URLRequest(url: url))
         
         DispatchQueue.main.async {
-            self.webViewState.webView = webView
-            // Update global state when webView is actually ready (iOS)
-            KinesteXAIKit.setGlobalWebViewState(self.webViewState)
+            webViewState.webView = webView
         }
         
         return webView
@@ -150,8 +148,6 @@ struct WebViewWrapper: UIViewRepresentable {
             webView.uiDelegate = nil
             webView.configuration.userContentController.removeAllScriptMessageHandlers()
             webViewState.webView = nil
-            // Clear global state when webView is terminated
-            KinesteXAIKit.setGlobalWebViewState(WebViewState())
             isLoading.wrappedValue = false
         }
         

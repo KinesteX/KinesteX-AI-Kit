@@ -63,3 +63,11 @@ public enum AdminContentType: String, CaseIterable, Identifiable {
         }
     }
 }
+
+/// WorkoutActivityAction for sending action on custom workouts
+public enum WorkoutActivityAction: String {
+    case start
+    case pause
+    case stop
+}
+
