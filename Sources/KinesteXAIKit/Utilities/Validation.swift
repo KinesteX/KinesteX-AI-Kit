@@ -44,6 +44,36 @@ func containsDisallowedCharacters(_ string: String) -> Bool {
     let disallowed = CharacterSet(charactersIn: "<>\"'")
     return string.rangeOfCharacter(from: disallowed) != nil
 }
+// Validation of workout-exercises
+func normalizeWorkoutExercises(
+    _ exercises: [WorkoutSequenceExercise]
+) -> [[String: Any]]? {
+    guard !exercises.isEmpty else {
+        print("⚠️ KinesteX: Validation Error: Exercises list empty")
+        return nil
+    }
+    
+    var normalizedExercises: [[String: Any]] = []
+    
+    for exercise in exercises {
+        // Validate exerciseId
+        if exercise.exerciseId.isEmpty || containsDisallowedCharacters(exercise.exerciseId) {
+            print("⚠️ KinesteX: Validation Error: exerciseId is not valid")
+            continue
+        }
+        
+        if(exercise.reps != nil && exercise.reps! < 0)
+            || (exercise.duration != nil && exercise.duration! < 0)
+            || (exercise.restDuration < 0) {
+            print("⚠️ KinesteX: Validation Error: one of these are not valid (reps, duration, restDuration) ")
+            continue
+        }
+        
+        normalizedExercises.append(exercise.toMap())
+    }
+    
+    return normalizedExercises.isEmpty ? nil : normalizedExercises
+}
 
 func validateInput(
     apiKey: String,

@@ -1,5 +1,6 @@
 import SwiftUI
 import WebKit
+import Combine
 
 struct KinestexView: View {
     let apiKey: String
@@ -9,9 +10,15 @@ struct KinestexView: View {
     let data: [String: Any]?
     @Binding var isLoading: Bool
     let onMessageReceived: (KinestexMessage) -> Void
-    @StateObject private var webViewState = WebViewState()
+    let style: IStyle?
+    @StateObject private var _webViewState = WebViewState()
+    @State private var showOverlay: Bool = true
     @Binding var currentExercise: String?
     @Binding var currentRestSpeech: String?
+    @Binding var workoutAction: [String: Any]?
+    
+    // Expose webViewState for sendAction functionality
+    var webViewState: WebViewState { _webViewState }
     
     public init(
         apiKey: String,
@@ -22,7 +29,9 @@ struct KinestexView: View {
         isLoading: Binding<Bool>,
         onMessageReceived: @escaping (KinestexMessage) -> Void,
         currentExercise: Binding<String?>,
-        currentRestSpeech: Binding<String?>
+        currentRestSpeech: Binding<String?>,
+        workoutAction: Binding<[String: Any]?>,
+        style: IStyle?,
     ) {
         self.apiKey = apiKey
         self.companyName = companyName
@@ -33,7 +42,20 @@ struct KinestexView: View {
         self.onMessageReceived = onMessageReceived
         self._currentExercise = currentExercise
         self._currentRestSpeech = currentRestSpeech
+        self._workoutAction = workoutAction
+        self.style = style
     }
+    
+    private var overlayColor: Color {
+        if let hex = style?.loadingBackgroundColor {
+            return Color.fromHex(hex)
+        } else if style?.style == "light" {
+            return .white
+        } else {
+            return .black
+        }
+    }
+
     
     public var body: some View {
         ZStack {
@@ -44,14 +66,29 @@ struct KinestexView: View {
                 userId: userId,
                 data: data,
                 isLoading: $isLoading,
-                onMessageReceived: onMessageReceived,
-                webViewState: webViewState
+                onMessageReceived: { message in
+                    switch message {
+                    case .kinestex_loaded(let data):
+                        DispatchQueue.main.asyncAfter(deadline: .now() + 0.35) {
+                            self.showOverlay = false
+                        }
+                        break
+                        
+                    default:
+                        break
+                    }
+                    onMessageReceived(message)
+                },
+                webViewState: _webViewState
             )
-            if isLoading {
-                Color.black
+//            if isLoading {
+//                KinestexOverlayView(style: style)
+//            }
+            if showOverlay {
+                KinestexOverlayView(style: style)
             }
         }
-        .background(Color.black)
+        .background(overlayColor)
         .onChange(of: currentExercise) { newValue in
             if let exercise = newValue {
                 updateCurrentExercise(exercise)
@@ -62,9 +99,13 @@ struct KinestexView: View {
                 updateCurrentRestSpeech(restSpeech)
             }
         }
+        .onReceive(Just(workoutAction)) { newValue in
+            guard let action = newValue, !action.isEmpty else { return }
+            updateWorkoutAction(action)
+        }
         .onDisappear {
             print("🗑️ KinesteX: cleaning up...")
-            guard let webView = webViewState.webView else {
+            guard let webView = _webViewState.webView else {
                 print("⚠️ KinesteX: No web view to clean up")
                 return
             }
@@ -131,7 +172,7 @@ struct KinestexView: View {
                     webView.configuration.userContentController.removeAllScriptMessageHandlers()
                     webView.configuration.userContentController.removeAllUserScripts()
                     
-                    webViewState.webView = nil
+                    _webViewState.webView = nil
                     print("✅ KinesteX: cleaned up and set webView to nil")
                 }
             }
@@ -139,7 +180,7 @@ struct KinestexView: View {
     }
     
     private func updateCurrentExercise(_ exercise: String?) {
-        guard let webView = webViewState.webView else {
+        guard let webView = _webViewState.webView else {
             print("⚠️ KinesteX: WebView is not available")
             return
         }
@@ -160,7 +201,7 @@ struct KinestexView: View {
     }
     
     private func updateCurrentRestSpeech(_ restSpeech: String?) { // Now accepts String?
-        guard let webView = webViewState.webView else {
+        guard let webView = _webViewState.webView else {
             print("⚠️ KinesteX: WebView is not available")
             return
         }
@@ -178,5 +219,55 @@ struct KinestexView: View {
                 print("✅ KinesteX: Successfully updated rest speech to: \(restSpeech ?? "NA")")
             }
         }
+    }
+    
+    private func updateWorkoutAction(_ action: [String: Any]) {
+        guard let webView = _webViewState.webView else {
+                print("⚠️ KinesteX: WebView not ready")
+                return
+            }
+        
+        do {
+            let jsonData = try JSONSerialization.data(withJSONObject: action)
+            guard let jsonString = String(data: jsonData, encoding: .utf8) else {
+                print("⚠️ KinesteX: Cannot convert payload to JSON string")
+                return
+            }
+            
+            let script = """
+            window.postMessage(\(jsonString), '*');
+            """
+            
+            webView.evaluateJavaScript(script) { _, error in
+                if let error {
+                    print("⚠️ KinesteX: Failed to send action payload: \(error)")
+                } else {
+                    print("→ Sent workout action payload: \(action)")
+                }
+            }
+        } catch {
+            print("⚠️ KinesteX: Failed to serialize action payload: \(error)")
+            return
+        }
+    }
+
+}
+
+struct KinestexOverlayView: View {
+    let style: IStyle?
+
+    private var overlayColor: Color {
+        if let hex = style?.loadingBackgroundColor {
+            return Color.fromHex(hex)
+        } else if style?.style == "light" {
+            return .white
+        } else {
+            return .black
+        }
+    }
+
+    var body: some View {
+        overlayColor
+            .ignoresSafeArea()
     }
 }
