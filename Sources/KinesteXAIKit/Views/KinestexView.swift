@@ -46,6 +46,17 @@ struct KinestexView: View {
         self.style = style
     }
     
+    private var overlayColor: Color {
+        if let hex = style?.loadingBackgroundColor {
+            return Color.fromHex(hex)
+        } else if style?.style == "light" {
+            return .white
+        } else {
+            return .black
+        }
+    }
+
+    
     public var body: some View {
         ZStack {
             WebViewWrapperView(
@@ -77,7 +88,7 @@ struct KinestexView: View {
                 KinestexOverlayView(style: style)
             }
         }
-        .background(Color.black)
+        .background(overlayColor)
         .onChange(of: currentExercise) { newValue in
             if let exercise = newValue {
                 updateCurrentExercise(exercise)
@@ -245,8 +256,18 @@ struct KinestexView: View {
 struct KinestexOverlayView: View {
     let style: IStyle?
 
+    private var overlayColor: Color {
+        if let hex = style?.loadingBackgroundColor {
+            return Color.fromHex(hex)
+        } else if style?.style == "light" {
+            return .white
+        } else {
+            return .black
+        }
+    }
+
     var body: some View {
-        Color.fromHex(style?.loadingBackgroundColor ?? "000000")
-        .ignoresSafeArea()
+        overlayColor
+            .ignoresSafeArea()
     }
 }

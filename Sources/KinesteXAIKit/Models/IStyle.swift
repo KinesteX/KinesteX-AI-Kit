@@ -17,7 +17,7 @@ public struct IStyle {
         style: String? = "dark",
         themeName: String? = nil,
         loadingStickmanColor: String? = nil,
-        loadingBackgroundColor: String? = "000000",
+        loadingBackgroundColor: String? = nil,
         loadingTextColor: String? = nil
     ) {
         self.style = style

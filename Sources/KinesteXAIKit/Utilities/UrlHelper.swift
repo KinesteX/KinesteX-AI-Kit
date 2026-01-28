@@ -23,12 +23,26 @@ enum UrlHelper {
         if let loadingStickmanColor = effectiveStyle.loadingStickmanColor {
             items.append(URLQueryItem(name: "loadingStickmanColor", value: loadingStickmanColor))
         }
+        
+        // Handle loadingBackgroundColor with default logic
+        let finalLoadingBackgroundColor: String
         if let loadingBackgroundColor = effectiveStyle.loadingBackgroundColor {
-            items.append(URLQueryItem(name: "loadingBackgroundColor", value: loadingBackgroundColor))
+            finalLoadingBackgroundColor = loadingBackgroundColor
+        } else {
+            // If loadingBackgroundColor is null, use white for "light" style
+            finalLoadingBackgroundColor = effectiveStyle.style == "light" ? "FFFFFF" : "000000"
         }
+        items.append(URLQueryItem(name: "loadingBackgroundColor", value: finalLoadingBackgroundColor))
+        
+        // Handle loadingTextColor with default logic
+        let finalLoadingTextColor: String
         if let loadingTextColor = effectiveStyle.loadingTextColor {
-            items.append(URLQueryItem(name: "loadingTextColor", value: loadingTextColor))
+            finalLoadingTextColor = loadingTextColor
+        } else {
+            // If loadingTextColor is null, use black for "light" style, white for "dark" or null
+            finalLoadingTextColor = effectiveStyle.style == "light" ? "000000" : "FFFFFF"
         }
+        items.append(URLQueryItem(name: "loadingTextColor", value: finalLoadingTextColor))
 
         return items
     }
