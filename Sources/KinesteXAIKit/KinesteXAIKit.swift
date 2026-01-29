@@ -4,7 +4,7 @@ import AVKit
 @MainActor
 @available(iOS 13, macOS 10.15, *)
 public struct KinesteXAIKit {
-    public var baseURL = URL(string: "https://kinestex.vercel.app")!
+    public var baseURL = URL(string: "https://ai.kinestex.com")!
     public var apiKey: String
     public var companyName: String
     public var userId: String
@@ -336,7 +336,6 @@ public struct KinesteXAIKit {
     /// Builds the Admin Workout Editor view.
     public func createAdminWorkoutEditor(
         organization: String,
-        style: IStyle?,
         contentType: AdminContentType? = nil,
         contentId: String? = nil,
         customQueries: [String: String]? = nil,
@@ -345,12 +344,12 @@ public struct KinesteXAIKit {
         onMessageReceived: @escaping (KinestexMessage) -> Void
     ) -> AnyView {
         // 1 Base admin URL
-        guard let baseUrl = URL(string: "https://admin.kinestex.com") else {
+        guard let adminURL = URL(string: "https://admin.kinestex.com") else {
             print("Invalid base URL")
             return AnyView(EmptyView())
         }
         
-        var url = baseURL
+        var url = adminURL
         if let type = contentType, let id = contentId {
             url.appendPathComponent(type.segment)
             url.appendPathComponent(id)
@@ -396,7 +395,7 @@ public struct KinesteXAIKit {
             isLoading: isLoading,
             onMessageReceived: onMessageReceived,
             useCustomURL: true,
-            style: style,
+            style: nil,
         )
     }
     
