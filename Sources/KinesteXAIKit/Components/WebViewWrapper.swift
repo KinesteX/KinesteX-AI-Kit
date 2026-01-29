@@ -6,6 +6,7 @@ class DebugWKWebView: WKWebView {
         print("🗑️ KinesteX: WebView deinitialized")
     }
 }
+
 // Cross-platform WebView wrapper view
 @available(iOS 13.0, macOS 10.15, *)
 struct WebViewWrapperView: View {

@@ -4,10 +4,11 @@ import AVKit
 @MainActor
 @available(iOS 13, macOS 10.15, *)
 public struct KinesteXAIKit {
-    public var baseURL = URL(string: "https://kinestex.vercel.app")!
+    public var baseURL = URL(string: "https://ai.kinestex.com")!
     public var apiKey: String
     public var companyName: String
     public var userId: String
+    
     public init(
         baseURL: URL? = nil,
         apiKey: String,
@@ -66,6 +67,7 @@ public struct KinesteXAIKit {
         currentExercise: Binding<String>,
         currentRestSpeech: Binding<String?>? = nil,
         user: UserDetails?,
+        style: IStyle?,
         isLoading: Binding<Bool>,
         customParams: [String: Any] = [:],
         onMessageReceived: @escaping (KinestexMessage) -> Void
@@ -89,7 +91,8 @@ public struct KinesteXAIKit {
             isLoading: isLoading,
             onMessageReceived: onMessageReceived,
             currentExercise: nullableCurrentExercise,
-            currentRestSpeech: currentRestSpeech
+            currentRestSpeech: currentRestSpeech,
+            style: style,
         )
     }
     
@@ -97,6 +100,7 @@ public struct KinesteXAIKit {
     public func createPlanView(
         plan: String,
         user: UserDetails?,
+        style: IStyle?,
         isLoading: Binding<Bool>,
         customParams: [String: Any] = [:],
         onMessageReceived: @escaping (KinestexMessage) -> Void
@@ -108,7 +112,8 @@ public struct KinesteXAIKit {
             user: user,
             customParams: customParams,
             isLoading: isLoading,
-            onMessageReceived: onMessageReceived
+            onMessageReceived: onMessageReceived,
+            style: style,
         )
     }
     /// Launches personalized plan view (beta preview).  Please contact KinesteX for access
@@ -123,6 +128,7 @@ public struct KinesteXAIKit {
     /// Launches personalized plan view (beta preview).  Please contact KinesteX for access
     public func createPersonalizedPlanView(
         user: UserDetails?,
+        style: IStyle?,
         isLoading: Binding<Bool>,
         customParams: [String: Any] = [:],
         onMessageReceived: @escaping (KinestexMessage) -> Void
@@ -133,13 +139,15 @@ public struct KinesteXAIKit {
             user: user,
             customParams: customParams,
             isLoading: isLoading,
-            onMessageReceived: onMessageReceived
+            onMessageReceived: onMessageReceived,
+            style: style,
         )
     }
     
     public func createCategoryView(
         planCategory: PlanCategory = .Cardio,
         user: UserDetails?,
+        style: IStyle?,
         isLoading: Binding<Bool>,
         customParams: [String: Any] = [:],
         onMessageReceived: @escaping (KinestexMessage) -> Void
@@ -158,7 +166,9 @@ public struct KinesteXAIKit {
                     user: user,
                     customParams: customParams,
                     isLoading: isLoading,
-                    onMessageReceived: onMessageReceived)
+                    onMessageReceived: onMessageReceived,
+                    style: style,
+        )
     }
     
     public func createHowToView(
@@ -201,6 +211,7 @@ public struct KinesteXAIKit {
     public func createWorkoutView(
         workout: String,
         user: UserDetails?,
+        style: IStyle?,
         isLoading: Binding<Bool>,
         customParams: [String: Any] = [:],
         onMessageReceived: @escaping (KinestexMessage) -> Void
@@ -212,7 +223,8 @@ public struct KinesteXAIKit {
             user: user,
             customParams: customParams,
             isLoading: isLoading,
-            onMessageReceived: onMessageReceived
+            onMessageReceived: onMessageReceived,
+            style: style,
         )
     }
     
@@ -221,6 +233,7 @@ public struct KinesteXAIKit {
         duration: Int,
         showLeaderboard: Bool = true,
         user: UserDetails?,
+        style: IStyle?,
         isLoading: Binding<Bool>,
         customParams: [String: Any] = [:],
         onMessageReceived: @escaping (KinestexMessage) -> Void
@@ -237,6 +250,7 @@ public struct KinesteXAIKit {
             customParams: customParams,
             isLoading: isLoading,
             onMessageReceived: onMessageReceived,
+            style: style,
         )
     }
     
@@ -246,6 +260,7 @@ public struct KinesteXAIKit {
         exercise: String,
         duration: Int = 60,
         user: UserDetails?,
+        style: IStyle?,
         isLoading: Binding<Bool>,
         customParams: [String: Any] = [:],
         onMessageReceived: @escaping (KinestexMessage) -> Void
@@ -262,12 +277,14 @@ public struct KinesteXAIKit {
             customParams: customParams,
             isLoading: isLoading,
             onMessageReceived: onMessageReceived,
+            style: style,
         )
     }
     
     public func createLeaderboardView(
         exercise: String,
         username: String = "",
+        style: IStyle?,
         isLoading: Binding<Bool>,
         customParams: [String: Any] = [:],
         onMessageReceived: @escaping (KinestexMessage) -> Void
@@ -283,6 +300,102 @@ public struct KinesteXAIKit {
             customParams: customParams,
             isLoading: isLoading,
             onMessageReceived: onMessageReceived,
+            style: style,
+        )
+    }
+    
+    public func createCustomWorkoutView(
+        exercises: [WorkoutSequenceExercise],
+        user: UserDetails?,
+        style: IStyle?,
+        isLoading: Binding<Bool>,
+        workoutAction: Binding<[String: Any]?>,
+        customParams: [String: Any] = [:],
+        onMessageReceived: @escaping (KinestexMessage) -> Void
+    ) -> AnyView {
+        let normalized = normalizeWorkoutExercises(exercises)
+        
+        print(normalized)
+        
+        let defaultData: [String: Any] = [
+            "customWorkoutExercises": normalized as Any
+        ]
+        
+        return makeView(
+            endpoint: "custom-workout",
+            defaultData: defaultData,
+            user: user,
+            customParams: customParams,
+            isLoading: isLoading,
+            onMessageReceived: onMessageReceived,
+            workoutAction: workoutAction,
+            style: style,
+        )
+    }
+    
+    /// Builds the Admin Workout Editor view.
+    public func createAdminWorkoutEditor(
+        organization: String,
+        contentType: AdminContentType? = nil,
+        contentId: String? = nil,
+        customQueries: [String: String]? = nil,
+        isLoading: Binding<Bool>,
+        customParams: [String: Any] = [:],
+        onMessageReceived: @escaping (KinestexMessage) -> Void
+    ) -> AnyView {
+        // 1 Base admin URL
+        guard let adminURL = URL(string: "https://admin.kinestex.com") else {
+            print("Invalid base URL")
+            return AnyView(EmptyView())
+        }
+        
+        var url = adminURL
+        if let type = contentType, let id = contentId {
+            url.appendPathComponent(type.segment)
+            url.appendPathComponent(id)
+        } else {
+            url.appendPathComponent("main")
+        }
+
+        // 3 Add query parameters
+        guard var components = URLComponents(url: url, resolvingAgainstBaseURL: false) else {
+            print("Failed to create URLComponents from \(url)")
+            return AnyView(EmptyView())
+        }
+        var queryItems = [
+            URLQueryItem(name: "isCustomAuth", value: "true"),
+            URLQueryItem(name: "hideSidebar", value: "true")
+        ]
+        
+        if let queries = customQueries {
+            for (k, v) in queries {
+                queryItems.append(URLQueryItem (name: k, value: v))
+            }
+        }
+
+        components.queryItems = queryItems
+        guard let fullURLString = components.url else {
+            print("Failed to get URL from components")
+            return AnyView(EmptyView())
+        }
+        
+        // 4 Default payload
+        let defaultData: [String: Any] = [
+            "organization": organization,
+            "apiKey": apiKey,
+            "companyName": companyName
+        ]
+        
+        // 5 Call makeView with the full URL as endpoint
+        return makeView(
+            endpoint: fullURLString.absoluteString,
+            defaultData: defaultData,
+            user: nil,
+            customParams: customParams,
+            isLoading: isLoading,
+            onMessageReceived: onMessageReceived,
+            useCustomURL: true,
+            style: nil,
         )
     }
     
@@ -330,7 +443,10 @@ public struct KinesteXAIKit {
         isLoading: Binding<Bool>,
         onMessageReceived: @escaping (KinestexMessage) -> Void,
         currentExercise: Binding<String?>? = nil,
-        currentRestSpeech: Binding<String?>? = nil
+        currentRestSpeech: Binding<String?>? = nil,
+        workoutAction: Binding<[String: Any]?>? = nil,
+        useCustomURL: Bool = false,
+        style: IStyle?
     ) -> AnyView {
         guard let payload = preparePayload(
             defaultData: defaultData,
@@ -340,20 +456,33 @@ public struct KinesteXAIKit {
             return AnyView(EmptyView())
         }
         
-        let url = baseURL.appendingPathComponent(endpoint)
-        return AnyView(
-            KinestexView(
-                apiKey: apiKey,
-                companyName: companyName,
-                userId: userId,
-                url: url,
-                data: payload,
-                isLoading: isLoading,
-                onMessageReceived: onMessageReceived,
-                currentExercise: currentExercise ?? .constant(nil),
-                currentRestSpeech: currentRestSpeech ?? .constant(nil)
-            )
+        let base: URL
+        if useCustomURL {
+            // When useCustomURL is true, treat endpoint as a full URL string
+            base = URL(string: endpoint) ?? baseURL
+        } else {
+            // Default behavior: append endpoint to baseURL
+            base = baseURL.appendingPathComponent(endpoint)
+        }
+        
+        let url = UrlHelper.appendStyle(to: base, style: style)
+        print("URL:", url)
+        
+        let kinestexView = KinestexView(
+            apiKey: apiKey,
+            companyName: companyName,
+            userId: userId,
+            url: url,
+            data: payload,
+            isLoading: isLoading,
+            onMessageReceived: onMessageReceived,
+            currentExercise: currentExercise ?? .constant(nil),
+            currentRestSpeech: currentRestSpeech ?? .constant(nil),
+            workoutAction: workoutAction ?? .constant(nil),
+            style: style
         )
+        
+        return AnyView(kinestexView)
     }
     
     
