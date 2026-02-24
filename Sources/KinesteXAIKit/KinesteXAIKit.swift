@@ -303,7 +303,22 @@ public struct KinesteXAIKit {
             style: style,
         )
     }
-    
+    public func createCustomComponentView(
+        route: String,
+        user: UserDetails?,
+        style: IStyle?,
+        isLoading: Binding<Bool>,
+        customParams: [String: Any] = [:],
+        onMessageReceived: @escaping (KinestexMessage) -> Void
+    ) -> AnyView {
+        return makeView(endpoint: route,
+                        defaultData: [:],
+                        user: user,
+                        customParams: customParams,
+                        isLoading: isLoading,
+                        onMessageReceived: onMessageReceived,
+                        style: style)
+    }
     public func createCustomWorkoutView(
         exercises: [WorkoutSequenceExercise],
         user: UserDetails?,
