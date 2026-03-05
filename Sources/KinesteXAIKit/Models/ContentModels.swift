@@ -2,6 +2,30 @@ import Foundation
 
 // MARK: - Base Models
 
+/// EquipmentModel represents an equipment item used in workouts or exercises.
+public struct EquipmentModel: Codable, Identifiable {
+    public let id: Int
+    public let title: String
+    public let description: String
+    public let homeAlternative: String
+    public let thumbnailURL: String
+
+    enum CodingKeys: String, CodingKey {
+        case id, title, description
+        case homeAlternative = "home_alternative"
+        case thumbnailURL = "thumbnail_url"
+    }
+
+    public init(from decoder: Decoder) throws {
+        let container = try decoder.container(keyedBy: CodingKeys.self)
+        id = (try? container.decode(Int.self, forKey: .id)) ?? 0
+        title = (try? container.decode(String.self, forKey: .title)) ?? ""
+        description = (try? container.decode(String.self, forKey: .description)) ?? ""
+        homeAlternative = (try? container.decode(String.self, forKey: .homeAlternative)) ?? ""
+        thumbnailURL = (try? container.decode(String.self, forKey: .thumbnailURL)) ?? ""
+    }
+}
+
 /// WorkoutModel represents the structure of a workout returned by the API.
 public struct WorkoutModel: Codable, Identifiable, RawDataCapturing {
     public let id: String
@@ -13,6 +37,7 @@ public struct WorkoutModel: Codable, Identifiable, RawDataCapturing {
     public let totalCalories: Int?
     public let bodyParts: [String]
     public let difficultyLevel: String?
+    public let equipment: [EquipmentModel]
     public let sequence: [ExerciseModel]
     
     // Raw data storage (not included in Codable)
@@ -29,7 +54,7 @@ public struct WorkoutModel: Codable, Identifiable, RawDataCapturing {
     }
     
     enum CodingKeys: String, CodingKey {
-        case id, title, description, category, sequence
+        case id, title, description, category, sequence, equipment
         case imgURL = "workout_desc_img"
         case totalMinutes = "total_minutes"
         case totalCalories = "calories"
@@ -48,6 +73,7 @@ public struct WorkoutModel: Codable, Identifiable, RawDataCapturing {
         totalCalories = try? container.decodeIfPresent(Int.self, forKey: .totalCalories)
         bodyParts = (try? container.decode([String].self, forKey: .bodyParts)) ?? []
         difficultyLevel = try? container.decodeIfPresent(String.self, forKey: .difficultyLevel)
+        equipment = (try? container.decode([EquipmentModel].self, forKey: .equipment)) ?? []
         sequence = (try? container.decode([ExerciseModel].self, forKey: .sequence)) ?? []
     }
 }
@@ -69,6 +95,7 @@ public struct ExerciseModel: Codable, Identifiable, RawDataCapturing {
     public let restSpeechText: String
     public let averageCalories: Double?
     public let bodyParts: [String]
+    public let equipment: [EquipmentModel]
     public let description: String
     public let difficultyLevel: String
     public let commonMistakes: String
@@ -90,7 +117,7 @@ public struct ExerciseModel: Codable, Identifiable, RawDataCapturing {
     }
     
     enum CodingKeys: String, CodingKey {
-        case id, title, description, steps, tips
+        case id, title, description, steps, tips, equipment
         case thumbnailURL = "thumbnail_URL"
         case videoURL = "video_URL"
         case workoutCountdown = "workout_countdown"
@@ -127,6 +154,7 @@ public struct ExerciseModel: Codable, Identifiable, RawDataCapturing {
         restSpeechText = (try? container.decode(String.self, forKey: .restSpeechText)) ?? ""
         averageCalories = try? container.decodeIfPresent(Double.self, forKey: .averageCalories)
         bodyParts = (try? container.decode([String].self, forKey: .bodyParts)) ?? []
+        equipment = (try? container.decode([EquipmentModel].self, forKey: .equipment)) ?? []
         description = (try? container.decode(String.self, forKey: .description)) ?? "Missing exercise description"
         difficultyLevel = (try? container.decode(String.self, forKey: .difficultyLevel)) ?? "Medium"
         commonMistakes = (try? container.decode(String.self, forKey: .commonMistakes)) ?? ""
