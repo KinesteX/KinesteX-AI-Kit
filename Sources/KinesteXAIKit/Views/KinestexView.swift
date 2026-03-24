@@ -11,15 +11,16 @@ struct KinestexView: View {
     @Binding var isLoading: Bool
     let onMessageReceived: (KinestexMessage) -> Void
     let style: IStyle?
-    @StateObject private var _webViewState = WebViewState()
+    @StateObject private var _internalWebViewState = WebViewState()
+    let externalWebViewState: WebViewState?
     @State private var showOverlay: Bool = true
     @Binding var currentExercise: String?
     @Binding var currentRestSpeech: String?
     @Binding var workoutAction: [String: Any]?
-    
-    // Expose webViewState for sendAction functionality
-    var webViewState: WebViewState { _webViewState }
-    
+
+    /// The active WebViewState — uses external if provided, otherwise internal.
+    var webViewState: WebViewState { externalWebViewState ?? _internalWebViewState }
+
     public init(
         apiKey: String,
         companyName: String,
@@ -31,6 +32,7 @@ struct KinestexView: View {
         currentExercise: Binding<String?>,
         currentRestSpeech: Binding<String?>,
         workoutAction: Binding<[String: Any]?>,
+        webViewState: WebViewState? = nil,
         style: IStyle?,
     ) {
         self.apiKey = apiKey
@@ -43,6 +45,7 @@ struct KinestexView: View {
         self._currentExercise = currentExercise
         self._currentRestSpeech = currentRestSpeech
         self._workoutAction = workoutAction
+        self.externalWebViewState = webViewState
         self.style = style
     }
     
@@ -67,6 +70,7 @@ struct KinestexView: View {
                 data: data,
                 isLoading: $isLoading,
                 onMessageReceived: { message in
+                    // Forward to caller
                     switch message {
                     case .kinestex_loaded(let data):
                         DispatchQueue.main.asyncAfter(deadline: .now() + 0.35) {
@@ -79,7 +83,7 @@ struct KinestexView: View {
                     }
                     onMessageReceived(message)
                 },
-                webViewState: _webViewState
+                webViewState: webViewState
             )
 //            if isLoading {
 //                KinestexOverlayView(style: style)
@@ -105,7 +109,7 @@ struct KinestexView: View {
         }
         .onDisappear {
             print("🗑️ KinesteX: cleaning up...")
-            guard let webView = _webViewState.webView else {
+            guard let webView = webViewState.webView else {
                 print("⚠️ KinesteX: No web view to clean up")
                 return
             }
@@ -172,7 +176,7 @@ struct KinestexView: View {
                     webView.configuration.userContentController.removeAllScriptMessageHandlers()
                     webView.configuration.userContentController.removeAllUserScripts()
                     
-                    _webViewState.webView = nil
+                    webViewState.webView = nil
                     print("✅ KinesteX: cleaned up and set webView to nil")
                 }
             }
@@ -180,7 +184,7 @@ struct KinestexView: View {
     }
     
     private func updateCurrentExercise(_ exercise: String?) {
-        guard let webView = _webViewState.webView else {
+        guard let webView = webViewState.webView else {
             print("⚠️ KinesteX: WebView is not available")
             return
         }
@@ -201,7 +205,7 @@ struct KinestexView: View {
     }
     
     private func updateCurrentRestSpeech(_ restSpeech: String?) { // Now accepts String?
-        guard let webView = _webViewState.webView else {
+        guard let webView = webViewState.webView else {
             print("⚠️ KinesteX: WebView is not available")
             return
         }
@@ -222,7 +226,7 @@ struct KinestexView: View {
     }
     
     private func updateWorkoutAction(_ action: [String: Any]) {
-        guard let webView = _webViewState.webView else {
+        guard let webView = webViewState.webView else {
                 print("⚠️ KinesteX: WebView not ready")
                 return
             }
