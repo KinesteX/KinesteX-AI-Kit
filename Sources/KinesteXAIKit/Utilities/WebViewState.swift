@@ -9,6 +9,7 @@
 import WebKit
 import Combine
 
+@MainActor
 public class WebViewState: ObservableObject {
     @Published public var webView: WKWebView?
 
