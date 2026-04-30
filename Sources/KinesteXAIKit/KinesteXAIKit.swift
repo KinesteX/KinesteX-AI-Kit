@@ -1,5 +1,5 @@
-import SwiftUI
 import AVKit
+import SwiftUI
 
 @MainActor
 @available(iOS 13, macOS 10.15, *)
@@ -8,7 +8,7 @@ public struct KinesteXAIKit {
     public var apiKey: String
     public var companyName: String
     public var userId: String
-    
+
     public init(
         baseURL: URL? = nil,
         apiKey: String,
@@ -59,9 +59,9 @@ public struct KinesteXAIKit {
             limit: limit
         )
     }
-    
+
     // MARK: - Public API
-    
+
     public func createCameraView(
         exercises: [String],
         currentExercise: Binding<String>,
@@ -75,7 +75,7 @@ public struct KinesteXAIKit {
     ) -> AnyView {
         let defaultData: [String: Any] = [
             "exercises": exercises,
-            "currentExercise": currentExercise.wrappedValue
+            "currentExercise": currentExercise.wrappedValue,
         ]
         let nullableCurrentExercise = Binding<String?>(
             get: { currentExercise.wrappedValue },
@@ -97,7 +97,6 @@ public struct KinesteXAIKit {
             style: style,
         )
     }
-
 
     public func createPlanView(
         plan: String,
@@ -149,7 +148,7 @@ public struct KinesteXAIKit {
             style: style,
         )
     }
-    
+
     public func createCategoryView(
         planCategory: PlanCategory = .Cardio,
         user: UserDetails?,
@@ -167,15 +166,16 @@ public struct KinesteXAIKit {
         let defaultData = [
             "planC": categoryString
         ]
-        
-        return makeView(endpoint: "",
-                    defaultData: defaultData,
-                    user: user,
-                    customParams: customParams,
-                    isLoading: isLoading,
-                    onMessageReceived: onMessageReceived,
-                    webViewState: webViewState,
-                    style: style,
+
+        return makeView(
+            endpoint: "",
+            defaultData: defaultData,
+            user: user,
+            customParams: customParams,
+            isLoading: isLoading,
+            onMessageReceived: onMessageReceived,
+            webViewState: webViewState,
+            style: style,
         )
     }
 
@@ -183,18 +183,19 @@ public struct KinesteXAIKit {
         videoURL: String? = nil,  // Optional URL, default to the predefined URL
         onVideoEnd: @escaping () -> Void
     ) -> AnyView {
-        let defaultVideoURL = "https://cdn.kinestex.com/SDK%2Fhow-to-video%2Foutput_compressed.mp4?alt=media&token=9a3c0ed8-c86b-4553-86dd-a96f23e55f74"
-        
+        let defaultVideoURL =
+            "https://cdn.kinestex.com/SDK%2Fhow-to-video%2Foutput_compressed.mp4?alt=media&token=9a3c0ed8-c86b-4553-86dd-a96f23e55f74"
+
         let url = URL(string: videoURL ?? defaultVideoURL)!
         let player = AVPlayer(url: url)
-        
+
         // Store the observer so we can remove it later
         var observer: NSObjectProtocol?
-        
+
         let playerView = VideoPlayer(player: player)
             .onAppear {
                 player.play()
-                
+
                 // Add observer for video end
                 observer = NotificationCenter.default.addObserver(
                     forName: .AVPlayerItemDidPlayToEndTime,
@@ -206,16 +207,16 @@ public struct KinesteXAIKit {
             }
             .onDisappear {
                 player.pause()
-                
+
                 // Remove observer safely when the view disappears
                 if let observer = observer {
                     NotificationCenter.default.removeObserver(observer)
                 }
             }
-        
+
         return AnyView(playerView)
     }
-    
+
     public func createWorkoutView(
         workout: String,
         user: UserDetails?,
@@ -225,7 +226,8 @@ public struct KinesteXAIKit {
         onMessageReceived: @escaping (KinestexMessage) -> Void,
         webViewState: WebViewState? = nil
     ) -> AnyView {
-        let safeWorkout = workout.addingPercentEncoding(withAllowedCharacters: .urlPathAllowed) ?? workout
+        let safeWorkout =
+            workout.addingPercentEncoding(withAllowedCharacters: .urlPathAllowed) ?? workout
         return makeView(
             endpoint: "workout/\(safeWorkout)",
             defaultData: [:],
@@ -237,7 +239,7 @@ public struct KinesteXAIKit {
             style: style,
         )
     }
-    
+
     public func createChallengeView(
         exercise: String,
         duration: Int,
@@ -252,7 +254,7 @@ public struct KinesteXAIKit {
         let defaultData: [String: Any] = [
             "exercise": exercise,
             "countdown": duration,
-            "showLeaderboard": showLeaderboard
+            "showLeaderboard": showLeaderboard,
         ]
         return makeView(
             endpoint: "challenge",
@@ -265,8 +267,7 @@ public struct KinesteXAIKit {
             style: style,
         )
     }
-    
-    
+
     public func createExperienceView(
         experience: String,
         exercise: String,
@@ -280,9 +281,10 @@ public struct KinesteXAIKit {
     ) -> AnyView {
         let defaultData: [String: Any] = [
             "countdown": duration,
-            "exercise": exercise
+            "exercise": exercise,
         ]
-        let safeExperience = experience.addingPercentEncoding(withAllowedCharacters: .urlPathAllowed) ?? experience
+        let safeExperience =
+            experience.addingPercentEncoding(withAllowedCharacters: .urlPathAllowed) ?? experience
         return makeView(
             endpoint: "experiences/\(safeExperience)",
             defaultData: defaultData,
@@ -305,11 +307,13 @@ public struct KinesteXAIKit {
         webViewState: WebViewState? = nil
     ) -> AnyView {
         let defaultData: [String: Any] = [
-            "exercise": exercise,
+            "exercise": exercise
         ]
-        let safeUsername = username.addingPercentEncoding(withAllowedCharacters: .urlPathAllowed) ?? username
+        let safeUsername =
+            username.addingPercentEncoding(withAllowedCharacters: .urlPathAllowed) ?? username
         return makeView(
-            endpoint: safeUsername.isEmpty ? "leaderboard" : "leaderboard/?username=\(safeUsername)",
+            endpoint: safeUsername.isEmpty
+                ? "leaderboard" : "leaderboard/?username=\(safeUsername)",
             defaultData: defaultData,
             user: nil,
             customParams: customParams,
@@ -328,14 +332,33 @@ public struct KinesteXAIKit {
         onMessageReceived: @escaping (KinestexMessage) -> Void,
         webViewState: WebViewState? = nil
     ) -> AnyView {
-        return makeView(endpoint: route,
-                        defaultData: [:],
-                        user: user,
-                        customParams: customParams,
-                        isLoading: isLoading,
-                        onMessageReceived: onMessageReceived,
-                        webViewState: webViewState,
-                        style: style)
+        return makeView(
+            endpoint: route,
+            defaultData: [:],
+            user: user,
+            customParams: customParams,
+            isLoading: isLoading,
+            onMessageReceived: onMessageReceived,
+            webViewState: webViewState,
+            style: style)
+    }
+    public func createTrainerChatView(
+        user: UserDetails?,
+        style: IStyle?,
+        isLoading: Binding<Bool>,
+        customParams: [String: Any] = [:],
+        onMessageReceived: @escaping (KinestexMessage) -> Void,
+        webViewState: WebViewState? = nil
+    ) -> AnyView {
+        return makeView(
+            endpoint: "trainer",
+            defaultData: [:],
+            user: user,
+            customParams: customParams,
+            isLoading: isLoading,
+            onMessageReceived: onMessageReceived,
+            webViewState: webViewState,
+            style: style)
     }
     public func createCustomWorkoutView(
         exercises: [WorkoutSequenceExercise],
@@ -348,13 +371,13 @@ public struct KinesteXAIKit {
         webViewState: WebViewState? = nil
     ) -> AnyView {
         let normalized = normalizeWorkoutExercises(exercises)
-        
+
         print(normalized)
-        
+
         let defaultData: [String: Any] = [
             "customWorkoutExercises": normalized as Any
         ]
-        
+
         return makeView(
             endpoint: "custom-workout",
             defaultData: defaultData,
@@ -384,7 +407,7 @@ public struct KinesteXAIKit {
             print("Invalid base URL")
             return AnyView(EmptyView())
         }
-        
+
         var url = adminURL
         if let type = contentType, let id = contentId {
             url.appendPathComponent(type.segment)
@@ -400,12 +423,12 @@ public struct KinesteXAIKit {
         }
         var queryItems = [
             URLQueryItem(name: "isCustomAuth", value: "true"),
-            URLQueryItem(name: "hideSidebar", value: "true")
+            URLQueryItem(name: "hideSidebar", value: "true"),
         ]
-        
+
         if let queries = customQueries {
             for (k, v) in queries {
-                queryItems.append(URLQueryItem (name: k, value: v))
+                queryItems.append(URLQueryItem(name: k, value: v))
             }
         }
 
@@ -414,14 +437,14 @@ public struct KinesteXAIKit {
             print("Failed to get URL from components")
             return AnyView(EmptyView())
         }
-        
+
         // 4 Default payload
         let defaultData: [String: Any] = [
             "organization": organization,
             "apiKey": apiKey,
-            "companyName": companyName
+            "companyName": companyName,
         ]
-        
+
         // 5 Call makeView with the full URL as endpoint
         return makeView(
             endpoint: fullURLString.absoluteString,
@@ -435,15 +458,14 @@ public struct KinesteXAIKit {
             style: nil,
         )
     }
-    
-    
+
     private func preparePayload(
         defaultData: [String: Any],
         user: UserDetails?,
         customParams: [String: Any]
     ) -> [String: Any]? {
         var merged = defaultData
-        
+
         // attach user details
         if let u = user {
             merged["age"] = u.age
@@ -452,24 +474,26 @@ public struct KinesteXAIKit {
             merged["gender"] = genderString(u.gender)
             merged["lifestyle"] = lifestyleString(u.lifestyle)
         }
-        
+
         // attach custom overrides
         merged.merge(customParams) { _, new in new }
-        
+
         // validate once
-        guard validateInput(
-            apiKey: apiKey,
-            companyName: companyName,
-            userId: userId,
-            customParams: merged
-        ) else {
+        guard
+            validateInput(
+                apiKey: apiKey,
+                companyName: companyName,
+                userId: userId,
+                customParams: merged
+            )
+        else {
             print("⚠️ KinesteX: Input validation failed.")
             return nil
         }
-        
+
         return merged
     }
-    
+
     /// Builds the KinestexView or returns an EmptyView on failure.
     @MainActor
     private func makeView(
@@ -486,14 +510,16 @@ public struct KinesteXAIKit {
         webViewState: WebViewState? = nil,
         style: IStyle?
     ) -> AnyView {
-        guard let payload = preparePayload(
-            defaultData: defaultData,
-            user: user,
-            customParams: customParams
-        ) else {
+        guard
+            let payload = preparePayload(
+                defaultData: defaultData,
+                user: user,
+                customParams: customParams
+            )
+        else {
             return AnyView(EmptyView())
         }
-        
+
         let base: URL
         if useCustomURL {
             // When useCustomURL is true, treat endpoint as a full URL string
@@ -502,10 +528,10 @@ public struct KinesteXAIKit {
             // Default behavior: append endpoint to baseURL
             base = baseURL.appendingPathComponent(endpoint)
         }
-        
+
         let url = UrlHelper.appendStyle(to: base, style: style)
         print("URL:", url)
-        
+
         let kinestexView = KinestexView(
             apiKey: apiKey,
             companyName: companyName,
@@ -520,11 +546,10 @@ public struct KinesteXAIKit {
             webViewState: webViewState,
             style: style
         )
-        
+
         return AnyView(kinestexView)
     }
-    
-    
+
     /// Fetches a specific workout by ID.
     ///
     /// - Parameters:
@@ -534,34 +559,37 @@ public struct KinesteXAIKit {
     /// - Returns: A task that provides a WorkoutModel or an error.
     public func fetchWorkout(id: String, lang: String = "en") async -> Result<WorkoutModel, Error> {
         let result = await fetchContent(contentType: .workout, id: id, lang: lang)
-        
+
         switch result {
         case .workout(let workout):
             return .success(workout)
         case .rawData(let data, let errorMessage):
-            return .failure(NSError(
-                domain: "KinesteXAIKit",
-                code: 422,
-                userInfo: [
-                    NSLocalizedDescriptionKey: errorMessage ?? "Failed to parse workout data",
-                    "rawData": data
-                ]
-            ))
+            return .failure(
+                NSError(
+                    domain: "KinesteXAIKit",
+                    code: 422,
+                    userInfo: [
+                        NSLocalizedDescriptionKey: errorMessage ?? "Failed to parse workout data",
+                        "rawData": data,
+                    ]
+                ))
         case .error(let message):
-            return .failure(NSError(
-                domain: "KinesteXAIKit",
-                code: 400,
-                userInfo: [NSLocalizedDescriptionKey: message]
-            ))
+            return .failure(
+                NSError(
+                    domain: "KinesteXAIKit",
+                    code: 400,
+                    userInfo: [NSLocalizedDescriptionKey: message]
+                ))
         default:
-            return .failure(NSError(
-                domain: "KinesteXAIKit",
-                code: 400,
-                userInfo: [NSLocalizedDescriptionKey: "Unexpected result type"]
-            ))
+            return .failure(
+                NSError(
+                    domain: "KinesteXAIKit",
+                    code: 400,
+                    userInfo: [NSLocalizedDescriptionKey: "Unexpected result type"]
+                ))
         }
     }
-    
+
     /// Fetches a specific exercise by ID.
     ///
     /// - Parameters:
@@ -569,36 +597,40 @@ public struct KinesteXAIKit {
     ///   - lang: The language for the content; defaults to English ("en").
     ///
     /// - Returns: A task that provides an ExerciseModel or an error.
-    public func fetchExercise(id: String, lang: String = "en") async -> Result<ExerciseModel, Error> {
+    public func fetchExercise(id: String, lang: String = "en") async -> Result<ExerciseModel, Error>
+    {
         let result = await fetchContent(contentType: .exercise, id: id, lang: lang)
-        
+
         switch result {
         case .exercise(let exercise):
             return .success(exercise)
         case .rawData(let data, let errorMessage):
-            return .failure(NSError(
-                domain: "KinesteXAIKit",
-                code: 422,
-                userInfo: [
-                    NSLocalizedDescriptionKey: errorMessage ?? "Failed to parse exercise data",
-                    "rawData": data
-                ]
-            ))
+            return .failure(
+                NSError(
+                    domain: "KinesteXAIKit",
+                    code: 422,
+                    userInfo: [
+                        NSLocalizedDescriptionKey: errorMessage ?? "Failed to parse exercise data",
+                        "rawData": data,
+                    ]
+                ))
         case .error(let message):
-            return .failure(NSError(
-                domain: "KinesteXAIKit",
-                code: 400,
-                userInfo: [NSLocalizedDescriptionKey: message]
-            ))
+            return .failure(
+                NSError(
+                    domain: "KinesteXAIKit",
+                    code: 400,
+                    userInfo: [NSLocalizedDescriptionKey: message]
+                ))
         default:
-            return .failure(NSError(
-                domain: "KinesteXAIKit",
-                code: 400,
-                userInfo: [NSLocalizedDescriptionKey: "Unexpected result type"]
-            ))
+            return .failure(
+                NSError(
+                    domain: "KinesteXAIKit",
+                    code: 400,
+                    userInfo: [NSLocalizedDescriptionKey: "Unexpected result type"]
+                ))
         }
     }
-    
+
     /// Fetches a specific workout plan by ID.
     ///
     /// - Parameters:
@@ -608,34 +640,37 @@ public struct KinesteXAIKit {
     /// - Returns: A task that provides a PlanModel or an error.
     public func fetchPlan(id: String, lang: String = "en") async -> Result<PlanModel, Error> {
         let result = await fetchContent(contentType: .plan, id: id, lang: lang)
-        
+
         switch result {
         case .plan(let plan):
             return .success(plan)
         case .rawData(let data, let errorMessage):
-            return .failure(NSError(
-                domain: "KinesteXAIKit",
-                code: 422,
-                userInfo: [
-                    NSLocalizedDescriptionKey: errorMessage ?? "Failed to parse plan data",
-                    "rawData": data
-                ]
-            ))
+            return .failure(
+                NSError(
+                    domain: "KinesteXAIKit",
+                    code: 422,
+                    userInfo: [
+                        NSLocalizedDescriptionKey: errorMessage ?? "Failed to parse plan data",
+                        "rawData": data,
+                    ]
+                ))
         case .error(let message):
-            return .failure(NSError(
-                domain: "KinesteXAIKit",
-                code: 400,
-                userInfo: [NSLocalizedDescriptionKey: message]
-            ))
+            return .failure(
+                NSError(
+                    domain: "KinesteXAIKit",
+                    code: 400,
+                    userInfo: [NSLocalizedDescriptionKey: message]
+                ))
         default:
-            return .failure(NSError(
-                domain: "KinesteXAIKit",
-                code: 400,
-                userInfo: [NSLocalizedDescriptionKey: "Unexpected result type"]
-            ))
+            return .failure(
+                NSError(
+                    domain: "KinesteXAIKit",
+                    code: 400,
+                    userInfo: [NSLocalizedDescriptionKey: "Unexpected result type"]
+                ))
         }
     }
-    
+
     /// Fetches workouts based on filter criteria.
     ///
     /// - Parameters:
@@ -661,34 +696,37 @@ public struct KinesteXAIKit {
             lastDocId: lastDocId,
             limit: limit
         )
-        
+
         switch result {
         case .workouts(let workouts):
             return .success(workouts)
         case .rawData(let data, let errorMessage):
-            return .failure(NSError(
-                domain: "KinesteXAIKit",
-                code: 422,
-                userInfo: [
-                    NSLocalizedDescriptionKey: errorMessage ?? "Failed to parse workouts data",
-                    "rawData": data
-                ]
-            ))
+            return .failure(
+                NSError(
+                    domain: "KinesteXAIKit",
+                    code: 422,
+                    userInfo: [
+                        NSLocalizedDescriptionKey: errorMessage ?? "Failed to parse workouts data",
+                        "rawData": data,
+                    ]
+                ))
         case .error(let message):
-            return .failure(NSError(
-                domain: "KinesteXAIKit",
-                code: 400,
-                userInfo: [NSLocalizedDescriptionKey: message]
-            ))
+            return .failure(
+                NSError(
+                    domain: "KinesteXAIKit",
+                    code: 400,
+                    userInfo: [NSLocalizedDescriptionKey: message]
+                ))
         default:
-            return .failure(NSError(
-                domain: "KinesteXAIKit",
-                code: 400,
-                userInfo: [NSLocalizedDescriptionKey: "Unexpected result type"]
-            ))
+            return .failure(
+                NSError(
+                    domain: "KinesteXAIKit",
+                    code: 400,
+                    userInfo: [NSLocalizedDescriptionKey: "Unexpected result type"]
+                ))
         }
     }
-    
+
     /// Fetches exercises based on filter criteria.
     ///
     /// - Parameters:
@@ -711,34 +749,37 @@ public struct KinesteXAIKit {
             lastDocId: lastDocId,
             limit: limit
         )
-        
+
         switch result {
         case .exercises(let exercises):
             return .success(exercises)
         case .rawData(let data, let errorMessage):
-            return .failure(NSError(
-                domain: "KinesteXAIKit",
-                code: 422,
-                userInfo: [
-                    NSLocalizedDescriptionKey: errorMessage ?? "Failed to parse exercises data",
-                    "rawData": data
-                ]
-            ))
+            return .failure(
+                NSError(
+                    domain: "KinesteXAIKit",
+                    code: 422,
+                    userInfo: [
+                        NSLocalizedDescriptionKey: errorMessage ?? "Failed to parse exercises data",
+                        "rawData": data,
+                    ]
+                ))
         case .error(let message):
-            return .failure(NSError(
-                domain: "KinesteXAIKit",
-                code: 400,
-                userInfo: [NSLocalizedDescriptionKey: message]
-            ))
+            return .failure(
+                NSError(
+                    domain: "KinesteXAIKit",
+                    code: 400,
+                    userInfo: [NSLocalizedDescriptionKey: message]
+                ))
         default:
-            return .failure(NSError(
-                domain: "KinesteXAIKit",
-                code: 400,
-                userInfo: [NSLocalizedDescriptionKey: "Unexpected result type"]
-            ))
+            return .failure(
+                NSError(
+                    domain: "KinesteXAIKit",
+                    code: 400,
+                    userInfo: [NSLocalizedDescriptionKey: "Unexpected result type"]
+                ))
         }
     }
-    
+
     /// Fetches plans based on filter criteria.
     ///
     /// - Parameters:
@@ -761,31 +802,34 @@ public struct KinesteXAIKit {
             lastDocId: lastDocId,
             limit: limit
         )
-        
+
         switch result {
         case .plans(let plans):
             return .success(plans)
         case .rawData(let data, let errorMessage):
-            return .failure(NSError(
-                domain: "KinesteXAIKit",
-                code: 422,
-                userInfo: [
-                    NSLocalizedDescriptionKey: errorMessage ?? "Failed to parse plans data",
-                    "rawData": data
-                ]
-            ))
+            return .failure(
+                NSError(
+                    domain: "KinesteXAIKit",
+                    code: 422,
+                    userInfo: [
+                        NSLocalizedDescriptionKey: errorMessage ?? "Failed to parse plans data",
+                        "rawData": data,
+                    ]
+                ))
         case .error(let message):
-            return .failure(NSError(
-                domain: "KinesteXAIKit",
-                code: 400,
-                userInfo: [NSLocalizedDescriptionKey: message]
-            ))
+            return .failure(
+                NSError(
+                    domain: "KinesteXAIKit",
+                    code: 400,
+                    userInfo: [NSLocalizedDescriptionKey: message]
+                ))
         default:
-            return .failure(NSError(
-                domain: "KinesteXAIKit",
-                code: 400,
-                userInfo: [NSLocalizedDescriptionKey: "Unexpected result type"]
-            ))
+            return .failure(
+                NSError(
+                    domain: "KinesteXAIKit",
+                    code: 400,
+                    userInfo: [NSLocalizedDescriptionKey: "Unexpected result type"]
+                ))
         }
     }
 }
