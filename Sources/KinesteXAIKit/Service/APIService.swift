@@ -13,6 +13,15 @@ public class APIService {
     }
     
     /// Fetches content data from the API based on the provided parameters.
+    ///
+    /// - Parameters:
+    ///   - includeKinestex: When set, controls whether KinesteX-owned content is
+    ///     included in the response by sending `include_kinestex=true|false`.
+    ///     When `nil`, the parameter is omitted and the server default applies.
+    ///   - customParams: Arbitrary additional query parameters appended to the
+    ///     request, allowing a company to apply its own custom filtering on top of
+    ///     the standard parameters. Keys and values are validated for disallowed
+    ///     characters.
     public func fetchContent(
         contentType: ContentType,
         id: String? = nil,
@@ -21,7 +30,9 @@ public class APIService {
         category: String? = nil,
         bodyParts: [BodyPart]? = nil,
         lastDocId: String? = nil,
-        limit: Int? = nil
+        limit: Int? = nil,
+        includeKinestex: Bool? = nil,
+        customParams: [String: String]? = nil
     ) async -> APIContentResult {
         // Determine endpoint
         let endpoint: String = {
@@ -64,6 +75,17 @@ public class APIService {
         if let bodyParts = bodyParts {
             let joined = bodyParts.map(\.rawValue).joined(separator: ",")
             queryItems.append(.init(name: "body_parts", value: joined))
+        }
+        if let includeKinestex = includeKinestex {
+            queryItems.append(.init(name: "include_kinestex", value: includeKinestex ? "true" : "false"))
+        }
+        if let customParams = customParams {
+            for (key, value) in customParams {
+                if containsDisallowedCharacters(key) || containsDisallowedCharacters(value) {
+                    return .error("Custom parameter '\(key)' contains disallowed characters.")
+                }
+                queryItems.append(.init(name: key, value: value))
+            }
         }
         components.queryItems = queryItems
         

@@ -34,6 +34,9 @@ public struct KinesteXAIKit {
     ///   - bodyParts: An optional array of `BodyPart` to filter content.
     ///   - lastDocId: An optional document ID for pagination.
     ///   - limit: An optional limit on the number of items to fetch.
+    ///   - includeKinestex: Optionally control whether KinesteX-owned content is
+    ///     included (`include_kinestex=true|false`). When `nil`, the server default applies.
+    ///   - customParams: Optional arbitrary query parameters for custom company filtering.
     ///
     /// - Returns: A task that provides an `APIContentResult` containing the requested content or an error.
     /// Fetches content data from the KinesteX API.
@@ -45,7 +48,9 @@ public struct KinesteXAIKit {
         category: String? = nil,
         bodyParts: [BodyPart]? = nil,
         lastDocId: String? = nil,
-        limit: Int? = nil
+        limit: Int? = nil,
+        includeKinestex: Bool? = nil,
+        customParams: [String: String]? = nil
     ) async -> APIContentResult {
         // now simply calls your service; no mutation required
         return await apiService.fetchContent(
@@ -56,7 +61,9 @@ public struct KinesteXAIKit {
             category: category,
             bodyParts: bodyParts,
             lastDocId: lastDocId,
-            limit: limit
+            limit: limit,
+            includeKinestex: includeKinestex,
+            customParams: customParams
         )
     }
 
@@ -679,6 +686,9 @@ public struct KinesteXAIKit {
     ///   - limit: Maximum number of workouts to fetch.
     ///   - lastDocId: Optional document ID for pagination.
     ///   - lang: The language for the content; defaults to English ("en").
+    ///   - includeKinestex: Optionally control whether KinesteX-owned content is
+    ///     included (`include_kinestex=true|false`). When `nil`, the server default applies.
+    ///   - customParams: Optional arbitrary query parameters for custom company filtering.
     ///
     /// - Returns: A task that provides a WorkoutsResponse or an error.
     public func fetchWorkouts(
@@ -686,7 +696,9 @@ public struct KinesteXAIKit {
         bodyParts: [BodyPart]? = nil,
         limit: Int? = 10,
         lastDocId: String? = nil,
-        lang: String = "en"
+        lang: String = "en",
+        includeKinestex: Bool? = nil,
+        customParams: [String: String]? = nil
     ) async -> Result<WorkoutsResponse, Error> {
         let result = await fetchContent(
             contentType: .workout,
@@ -694,7 +706,9 @@ public struct KinesteXAIKit {
             category: category,
             bodyParts: bodyParts,
             lastDocId: lastDocId,
-            limit: limit
+            limit: limit,
+            includeKinestex: includeKinestex,
+            customParams: customParams
         )
 
         switch result {
@@ -734,20 +748,27 @@ public struct KinesteXAIKit {
     ///   - limit: Maximum number of exercises to fetch.
     ///   - lastDocId: Optional document ID for pagination.
     ///   - lang: The language for the content; defaults to English ("en").
+    ///   - includeKinestex: Optionally control whether KinesteX-owned content is
+    ///     included (`include_kinestex=true|false`). When `nil`, the server default applies.
+    ///   - customParams: Optional arbitrary query parameters for custom company filtering.
     ///
     /// - Returns: A task that provides an ExercisesResponse or an error.
     public func fetchExercises(
         bodyParts: [BodyPart]? = nil,
         limit: Int? = 10,
         lastDocId: String? = nil,
-        lang: String = "en"
+        lang: String = "en",
+        includeKinestex: Bool? = nil,
+        customParams: [String: String]? = nil
     ) async -> Result<ExercisesResponse, Error> {
         let result = await fetchContent(
             contentType: .exercise,
             lang: lang,
             bodyParts: bodyParts,
             lastDocId: lastDocId,
-            limit: limit
+            limit: limit,
+            includeKinestex: includeKinestex,
+            customParams: customParams
         )
 
         switch result {
@@ -787,20 +808,27 @@ public struct KinesteXAIKit {
     ///   - limit: Maximum number of plans to fetch.
     ///   - lastDocId: Optional document ID for pagination.
     ///   - lang: The language for the content; defaults to English ("en").
+    ///   - includeKinestex: Optionally control whether KinesteX-owned content is
+    ///     included (`include_kinestex=true|false`). When `nil`, the server default applies.
+    ///   - customParams: Optional arbitrary query parameters for custom company filtering.
     ///
     /// - Returns: A task that provides a PlansResponse or an error.
     public func fetchPlans(
         category: String? = nil,
         limit: Int? = 10,
         lastDocId: String? = nil,
-        lang: String = "en"
+        lang: String = "en",
+        includeKinestex: Bool? = nil,
+        customParams: [String: String]? = nil
     ) async -> Result<PlansResponse, Error> {
         let result = await fetchContent(
             contentType: .plan,
             lang: lang,
             category: category,
             lastDocId: lastDocId,
-            limit: limit
+            limit: limit,
+            includeKinestex: includeKinestex,
+            customParams: customParams
         )
 
         switch result {
