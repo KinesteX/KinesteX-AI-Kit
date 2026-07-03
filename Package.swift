@@ -18,7 +18,8 @@ let package = Package(
         // Targets are the basic building blocks of a package, defining a module or a test suite.
         // Targets can depend on other targets in this package and products from dependencies.
         .target(
-            name: "KinesteXAIKit"),
+            name: "KinesteXAIKit",
+            resources: [.process("Media.xcassets")]),
         .testTarget(
             name: "KinesteXAIKitTests",
             dependencies: ["KinesteXAIKit"]

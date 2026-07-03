@@ -92,7 +92,11 @@ struct KinestexView: View {
 //                KinestexOverlayView(style: style)
 //            }
             if showOverlay {
-                KinestexOverlayView(style: style)
+                KinestexOverlayView(
+                    style: style,
+                    foregroundColor: foregroundColor,
+                    onBack: exitKinesteX
+                )
             }
             if showRetry {
                 RetryView(
@@ -360,6 +364,8 @@ struct KinestexView: View {
 
 struct KinestexOverlayView: View {
     let style: IStyle?
+    let foregroundColor: Color
+    let onBack: () -> Void
 
     private var overlayColor: Color {
         if let hex = style?.loadingBackgroundColor {
@@ -372,8 +378,34 @@ struct KinestexOverlayView: View {
     }
 
     var body: some View {
-        overlayColor
-            .ignoresSafeArea()
+        ZStack {
+            overlayColor.ignoresSafeArea()
+            KinestexBackButton(color: foregroundColor, action: onBack)
+        }
+    }
+}
+
+struct KinestexBackButton: View {
+    let color: Color
+    let action: () -> Void
+
+    var body: some View {
+        VStack {
+            HStack {
+                Button(action: action) {
+                    Image("ic_arrow_left", bundle: .module)
+                        .renderingMode(.template)
+                        .resizable()
+                        .frame(width: 20, height: 20)
+                        .foregroundColor(color)
+                        .frame(width: 40, height: 40)
+                }
+                .buttonStyle(.plain)
+                Spacer()
+            }
+            Spacer()
+        }
+        .padding(16)
     }
 }
 
@@ -389,20 +421,8 @@ struct RetryView: View {
     var body: some View {
         ZStack {
             backgroundColor.ignoresSafeArea()
-
-            // Back button, top-left.
-            VStack {
-                HStack {
-                    Button(action: onBack) {
-                        Image(systemName: "chevron.left")
-                            .font(.system(size: 20, weight: .semibold))
-                            .foregroundColor(foregroundColor)
-                            .padding(26)
-                    }
-                    Spacer()
-                }
-                Spacer()
-            }
+            
+            KinestexBackButton(color: foregroundColor, action: onBack)
 
             // Retry, centered.
             Button(action: onRetry) {
