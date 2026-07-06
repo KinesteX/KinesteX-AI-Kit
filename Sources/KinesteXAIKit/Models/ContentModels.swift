@@ -336,7 +336,7 @@ public struct WorkoutSummary: Codable, Identifiable, RawDataCapturing {
 
 public struct WorkoutsResponse: Codable, RawDataCapturing {
     public let workouts: [WorkoutModel]
-    public let lastDocId: String
+    public let lastDocId: String?
     
     // Raw data storage (not included in Codable)
     private var _rawJSON: [String: Any]?
@@ -359,11 +359,11 @@ public struct WorkoutsResponse: Codable, RawDataCapturing {
     public init(from decoder: Decoder) throws {
         let container = try decoder.container(keyedBy: CodingKeys.self)
         workouts = try container.decode([WorkoutModel].self, forKey: .workouts)
-        lastDocId = try container.decode(String.self, forKey: .lastDocId)
+        lastDocId = try container.decodeIfPresent(String.self, forKey: .lastDocId)
     }
     
     // Custom initializer for direct initialization
-    public init(workouts: [WorkoutModel], lastDocId: String) {
+    public init(workouts: [WorkoutModel], lastDocId: String?) {
         self.workouts = workouts
         self.lastDocId = lastDocId
     }
@@ -371,7 +371,7 @@ public struct WorkoutsResponse: Codable, RawDataCapturing {
 
 public struct ExercisesResponse: Codable, RawDataCapturing {
     public let exercises: [ExerciseModel]
-    public let lastDocId: String
+    public let lastDocId: String?
     
     // Raw data storage (not included in Codable)
     private var _rawJSON: [String: Any]?
@@ -393,13 +393,13 @@ public struct ExercisesResponse: Codable, RawDataCapturing {
     public init(from decoder: Decoder) throws {
         let container = try decoder.container(keyedBy: CodingKeys.self)
         exercises = try container.decode([ExerciseModel].self, forKey: .exercises)
-        lastDocId = try container.decode(String.self, forKey: .lastDocId)
+        lastDocId = try container.decodeIfPresent(String.self, forKey: .lastDocId)
     }
 }
 
 public struct PlansResponse: Codable, RawDataCapturing {
     public let plans: [PlanModel]
-    public let lastDocId: String
+    public let lastDocId: String?
     
     // Raw data storage (not included in Codable)
     private var _rawJSON: [String: Any]?
@@ -421,7 +421,7 @@ public struct PlansResponse: Codable, RawDataCapturing {
     public init(from decoder: Decoder) throws {
         let container = try decoder.container(keyedBy: CodingKeys.self)
         plans = try container.decode([PlanModel].self, forKey: .plans)
-        lastDocId = try container.decode(String.self, forKey: .lastDocId)
+        lastDocId = try container.decodeIfPresent(String.self, forKey: .lastDocId)
     }
 }
 

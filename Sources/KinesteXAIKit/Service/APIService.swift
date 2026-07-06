@@ -164,7 +164,7 @@ public class APIService {
                         return try decoder.decode(WorkoutModel.self, from: workoutData)
                     }
                     
-                    let lastDocId = json["lastDocId"] as? String ?? ""
+                    let lastDocId = json["lastDocId"] as? String
                     var response = WorkoutsResponse(workouts: workouts, lastDocId: lastDocId)
                     response.captureRawJSON(jsonData)
                     return .workouts(response)
