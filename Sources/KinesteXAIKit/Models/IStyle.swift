@@ -57,4 +57,16 @@ extension Color {
             opacity: opacity
         )
     }
+
+    /// Perceived-luminance test so foreground icons stay legible:
+    /// dark background -> white icon, light background -> black icon.
+    /// Parses identically to `fromHex` above so the darkness test always
+    /// matches the color actually rendered as the overlay background.
+    static func isHexDark(_ hex: String) -> Bool {
+        let value = Int(hex, radix: 16) ?? 0
+        let r = Double((value >> 16) & 0xFF)
+        let g = Double((value >> 8) & 0xFF)
+        let b = Double(value & 0xFF)
+        return (0.299 * r + 0.587 * g + 0.114 * b) / 255 < 0.5
+    }
 }

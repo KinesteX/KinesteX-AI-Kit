@@ -64,9 +64,18 @@ struct KinestexView: View {
         }
     }
 
-    /// Retry-screen foreground (matches the "dark mode" default from Flutter).
+    /// Overlay icon/text color, derived from the background luminance so the
+    /// icon is always legible: black on a light background, white on a dark one.
     private var foregroundColor: Color {
-        style?.style == "light" ? .black : .white
+        backgroundIsDark ? .white : .black
+    }
+
+    /// Whether the resolved overlay background is dark (mirrors `overlayColor`).
+    private var backgroundIsDark: Bool {
+        if let hex = style?.loadingBackgroundColor {
+            return Color.isHexDark(hex)
+        }
+        return style?.style != "light"
     }
 
     private var connectionMessageText: String {
@@ -427,8 +436,10 @@ struct RetryView: View {
             // Retry, centered.
             Button(action: onRetry) {
                 VStack(spacing: 12) {
-                    Image(systemName: "arrow.clockwise")
-                        .font(.system(size: 48))
+                    Image("ic_refresh", bundle: .module)
+                        .renderingMode(.template)
+                        .resizable()
+                        .frame(width: 42, height: 42)
                         .foregroundColor(foregroundColor)
                     Text(message)
                         .multilineTextAlignment(.center)
