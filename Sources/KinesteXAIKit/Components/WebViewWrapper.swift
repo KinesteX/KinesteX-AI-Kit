@@ -187,7 +187,10 @@ struct WebViewWrapper: UIViewRepresentable {
                let jsonString = String(data: jsonData, encoding: .utf8) {
                 return "window.postMessage(\(jsonString), '\(url.absoluteString)');"
             }
-            return "window.postMessage({ 'key': '\(apiKey ?? "")', 'company': '\(companyName)', 'userId': '\(userId)' }, '\(url.absoluteString)');"
+            // A missing key must be OMITTED, never sent as "" — an empty key passes the
+            // web's key-presence gate and fires a doomed legacy-auth attempt.
+            let keyField = apiKey.map { "'key': '\($0)', " } ?? ""
+            return "window.postMessage({ \(keyField)'company': '\(companyName)', 'userId': '\(userId)' }, '\(url.absoluteString)');"
         }
         
         public func userContentController(_ userContentController: WKUserContentController, didReceive message: WKScriptMessage) {
@@ -335,7 +338,10 @@ public struct WebViewWrapper: NSViewRepresentable {
                let jsonString = String(data: jsonData, encoding: .utf8) {
                 return "window.postMessage(\(jsonString), '\(parent.url)');"
             }
-            return "window.postMessage({ 'key': '\(parent.apiKey ?? "")', 'company': '\(parent.companyName)', 'userId': '\(parent.userId)' }, '\(parent.url)');"
+            // A missing key must be OMITTED, never sent as "" — an empty key passes the
+            // web's key-presence gate and fires a doomed legacy-auth attempt.
+            let keyField = parent.apiKey.map { "'key': '\($0)', " } ?? ""
+            return "window.postMessage({ \(keyField)'company': '\(parent.companyName)', 'userId': '\(parent.userId)' }, '\(parent.url)');"
         }
         
         public func userContentController(_ userContentController: WKUserContentController, didReceive message: WKScriptMessage) {

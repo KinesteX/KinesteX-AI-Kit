@@ -448,11 +448,13 @@ public struct KinesteXAIKit {
         }
 
         // 4 Default payload
-        let defaultData: [String: Any] = [
+        var defaultData: [String: Any] = [
             "organization": organization,
-            "apiKey": apiKey ?? "",
             "companyName": companyName,
         ]
+        if let apiKey = apiKey {
+            defaultData["apiKey"] = apiKey
+        }
 
         // 5 Call makeView with the full URL as endpoint
         return makeView(
