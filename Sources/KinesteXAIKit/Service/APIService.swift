@@ -4,12 +4,20 @@ import Foundation
 @MainActor
 public class APIService {
     private let baseURL = "https://admin.kinestex.com/api/v1/"
-    private let apiKey: String
+    private let apiKey: String?
     private let companyName: String
-    
-    public init(apiKey: String, companyName: String) {
+
+    public init(apiKey: String?, companyName: String) {
         self.apiKey = apiKey
         self.companyName = companyName
+    }
+
+    // The content API has no session-auth path — a key-less kit must fail fast with
+    // a clear message instead of a bare 401.
+    private var missingKeyError: String? {
+        apiKey == nil
+            ? "⚠️ The content API requires an apiKey; session-based auth does not cover it."
+            : nil
     }
     
     /// Fetches content data from the API based on the provided parameters.
@@ -34,6 +42,9 @@ public class APIService {
         includeKinestex: Bool? = nil,
         customParams: [String: String]? = nil
     ) async -> APIContentResult {
+        if let missingKeyError = missingKeyError {
+            return .error(missingKeyError)
+        }
         // Determine endpoint
         let endpoint: String = {
             switch contentType {
@@ -96,7 +107,9 @@ public class APIService {
         // Create request
         var request = URLRequest(url: url)
         request.httpMethod = "GET"
-        request.setValue(apiKey, forHTTPHeaderField: "x-api-key")
+        if let apiKey = apiKey {
+            request.setValue(apiKey, forHTTPHeaderField: "x-api-key")
+        }
         request.setValue(companyName, forHTTPHeaderField: "x-company-name")
         print ("KinesteX: Request: \(url)")
         

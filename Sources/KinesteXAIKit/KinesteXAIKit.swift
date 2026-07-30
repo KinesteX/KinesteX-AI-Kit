@@ -5,13 +5,15 @@ import SwiftUI
 @available(iOS 13, macOS 10.15, *)
 public struct KinesteXAIKit {
     public var baseURL = URL(string: "https://ai.kinestex.com")!
-    public var apiKey: String
+    /// Optional: omit it for session-based auth and pass the session id via
+    /// `customParams` (e.g. `["session": "..."]`) instead.
+    public var apiKey: String?
     public var companyName: String
     public var userId: String
 
     public init(
         baseURL: URL? = nil,
-        apiKey: String,
+        apiKey: String? = nil,
         companyName: String,
         userId: String
     ) {
@@ -446,11 +448,13 @@ public struct KinesteXAIKit {
         }
 
         // 4 Default payload
-        let defaultData: [String: Any] = [
+        var defaultData: [String: Any] = [
             "organization": organization,
-            "apiKey": apiKey,
             "companyName": companyName,
         ]
+        if let apiKey = apiKey {
+            defaultData["apiKey"] = apiKey
+        }
 
         // 5 Call makeView with the full URL as endpoint
         return makeView(
@@ -496,6 +500,12 @@ public struct KinesteXAIKit {
         else {
             print("⚠️ KinesteX: Input validation failed.")
             return nil
+        }
+
+        // Neither a key nor a session means the web's verify gate never opens and
+        // the launch stalls on the loading screen — make the misconfiguration loud.
+        if apiKey == nil && merged["session"] == nil {
+            print("⚠️ KinesteX: no apiKey and no 'session' custom param — the experience cannot authenticate.")
         }
 
         return merged
