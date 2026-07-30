@@ -3,7 +3,7 @@ import WebKit
 import Combine
 
 struct KinestexView: View {
-    let apiKey: String
+    let apiKey: String?
     let companyName: String
     let userId: String
     let url: URL
@@ -22,7 +22,7 @@ struct KinestexView: View {
     var webViewState: WebViewState { externalWebViewState ?? _internalWebViewState }
 
     public init(
-        apiKey: String,
+        apiKey: String?,
         companyName: String,
         userId: String,
         url: URL,

@@ -5,13 +5,15 @@ import SwiftUI
 @available(iOS 13, macOS 10.15, *)
 public struct KinesteXAIKit {
     public var baseURL = URL(string: "https://ai.kinestex.com")!
-    public var apiKey: String
+    /// Optional: omit it for session-based auth and pass the session id via
+    /// `customParams` (e.g. `["session": "..."]`) instead.
+    public var apiKey: String?
     public var companyName: String
     public var userId: String
 
     public init(
         baseURL: URL? = nil,
-        apiKey: String,
+        apiKey: String? = nil,
         companyName: String,
         userId: String
     ) {
@@ -448,7 +450,7 @@ public struct KinesteXAIKit {
         // 4 Default payload
         let defaultData: [String: Any] = [
             "organization": organization,
-            "apiKey": apiKey,
+            "apiKey": apiKey ?? "",
             "companyName": companyName,
         ]
 

@@ -76,12 +76,12 @@ func normalizeWorkoutExercises(
 }
 
 func validateInput(
-    apiKey: String,
+    apiKey: String?,
     companyName: String,
     userId: String,
     customParams: [String: Any]
 ) -> Bool {
-    if containsDisallowedCharacters(apiKey) {
+    if let apiKey = apiKey, containsDisallowedCharacters(apiKey) {
         print("⚠️ KinesteX: Validation Error: apiKey contains disallowed characters.")
         return false
     }
@@ -93,20 +93,18 @@ func validateInput(
         print("⚠️ KinesteX: Validation Error: userId contains disallowed characters.")
         return false
     }
-    
-    for (key, value) in customParams {
+
+    // Only keys are validated. Values are JSON-serialized before reaching the web
+    // view, so quotes/brackets in free text (e.g. a greeting) are safely escaped.
+    for (key, _) in customParams {
         if containsDisallowedCharacters(key) {
             print("⚠️ KinesteX: Validation Error: Custom parameter key '\(key)' contains disallowed characters.")
             return false
         }
-        if let stringValue = value as? String, containsDisallowedCharacters(stringValue) {
-            print("⚠️ KinesteX: Validation Error: Custom parameter value for key '\(key)' ('\(stringValue)') contains disallowed characters.")
-            return false
-        }
     }
-    
-    if apiKey.isEmpty {
-        print("⚠️ KinesteX: Validation Error: apiKey cannot be empty.")
+
+    if let apiKey = apiKey, apiKey.isEmpty {
+        print("⚠️ KinesteX: Validation Error: apiKey cannot be empty. Omit it entirely for session-based auth.")
         return false
     }
     if userId.isEmpty {

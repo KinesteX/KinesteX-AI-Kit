@@ -35,6 +35,25 @@ Use Swift Package Manager:
    )
    ```
 
+   Using session-based auth instead? Omit `apiKey` and pass your session id with
+   the view's custom params:
+
+   ```swift
+   let kit = KinesteXAIKit(companyName: "MyCompany", userId: "user-123")
+   // later, on any view factory:
+   customParams: ["session": "YOUR_SESSION_ID"]
+   ```
+
+   **Sending data at runtime**: pass a `WebViewState` into any view factory
+   (`webViewState:` parameter), then post arbitrary JSON to the running
+   experience at any time:
+
+   ```swift
+   @StateObject var webViewState = WebViewState()
+   // ...
+   webViewState.sendMessage(["type": "update_trainer_profile", "age": 32, "weight": 70])
+   ```
+
 3. Create a view that drives the camera workout:
 
    ```swift

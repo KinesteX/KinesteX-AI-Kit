@@ -11,7 +11,7 @@ class DebugWKWebView: WKWebView {
 @available(iOS 13.0, macOS 10.15, *)
 struct WebViewWrapperView: View {
     let url: URL
-    let apiKey: String
+    let apiKey: String?
     let companyName: String
     let userId: String
     let data: [String: Any]?
@@ -50,7 +50,7 @@ struct WebViewWrapperView: View {
 #if os(iOS) || targetEnvironment(macCatalyst)
 struct WebViewWrapper: UIViewRepresentable {
     let url: URL
-    let apiKey: String
+    let apiKey: String?
     let companyName: String
     let userId: String
     let data: [String: Any]?
@@ -112,17 +112,17 @@ struct WebViewWrapper: UIViewRepresentable {
         let isLoading: Binding<Bool>
         let webViewState: WebViewState
         let onMessageReceived: (KinestexMessage) -> Void
-        let apiKey: String
+        let apiKey: String?
         let companyName: String
         let userId: String
         let data: [String: Any]?
         let url: URL
-        
+
         init(
             isLoading: Binding<Bool>,
             webViewState: WebViewState,
             onMessageReceived: @escaping (KinestexMessage) -> Void,
-            apiKey: String,
+            apiKey: String?,
             companyName: String,
             userId: String,
             data: [String: Any]?,
@@ -174,10 +174,12 @@ struct WebViewWrapper: UIViewRepresentable {
         
         private func createPostMessageScript() -> String {
             var scriptData: [String: Any] = [
-                "key": apiKey,
                 "company": companyName,
                 "userId": userId
             ]
+            if let apiKey = apiKey {
+                scriptData["key"] = apiKey
+            }
             if let data = data {
                 scriptData.merge(data) { _, new in new }
             }
@@ -185,7 +187,7 @@ struct WebViewWrapper: UIViewRepresentable {
                let jsonString = String(data: jsonData, encoding: .utf8) {
                 return "window.postMessage(\(jsonString), '\(url.absoluteString)');"
             }
-            return "window.postMessage({ 'key': '\(apiKey)', 'company': '\(companyName)', 'userId': '\(userId)' }, '\(url.absoluteString)');"
+            return "window.postMessage({ 'key': '\(apiKey ?? "")', 'company': '\(companyName)', 'userId': '\(userId)' }, '\(url.absoluteString)');"
         }
         
         public func userContentController(_ userContentController: WKUserContentController, didReceive message: WKScriptMessage) {
@@ -258,7 +260,7 @@ struct WebViewWrapper: UIViewRepresentable {
 #elseif os(macOS)
 public struct WebViewWrapper: NSViewRepresentable {
     let url: URL
-    let apiKey: String
+    let apiKey: String?
     let companyName: String
     let userId: String
     let data: [String: Any]?
@@ -320,10 +322,12 @@ public struct WebViewWrapper: NSViewRepresentable {
         
         private func createPostMessageScript() -> String {
             var scriptData: [String: Any] = [
-                "key": parent.apiKey,
                 "company": parent.companyName,
                 "userId": parent.userId
             ]
+            if let apiKey = parent.apiKey {
+                scriptData["key"] = apiKey
+            }
             if let data = parent.data {
                 scriptData.merge(data) { _, new in new }
             }
@@ -331,7 +335,7 @@ public struct WebViewWrapper: NSViewRepresentable {
                let jsonString = String(data: jsonData, encoding: .utf8) {
                 return "window.postMessage(\(jsonString), '\(parent.url)');"
             }
-            return "window.postMessage({ 'key': '\(parent.apiKey)', 'company': '\(parent.companyName)', 'userId': '\(parent.userId)' }, '\(parent.url)');"
+            return "window.postMessage({ 'key': '\(parent.apiKey ?? "")', 'company': '\(parent.companyName)', 'userId': '\(parent.userId)' }, '\(parent.url)');"
         }
         
         public func userContentController(_ userContentController: WKUserContentController, didReceive message: WKScriptMessage) {

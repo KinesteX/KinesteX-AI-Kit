@@ -4,10 +4,10 @@ import Foundation
 @MainActor
 public class APIService {
     private let baseURL = "https://admin.kinestex.com/api/v1/"
-    private let apiKey: String
+    private let apiKey: String?
     private let companyName: String
-    
-    public init(apiKey: String, companyName: String) {
+
+    public init(apiKey: String?, companyName: String) {
         self.apiKey = apiKey
         self.companyName = companyName
     }
@@ -96,7 +96,9 @@ public class APIService {
         // Create request
         var request = URLRequest(url: url)
         request.httpMethod = "GET"
-        request.setValue(apiKey, forHTTPHeaderField: "x-api-key")
+        if let apiKey = apiKey {
+            request.setValue(apiKey, forHTTPHeaderField: "x-api-key")
+        }
         request.setValue(companyName, forHTTPHeaderField: "x-company-name")
         print ("KinesteX: Request: \(url)")
         
