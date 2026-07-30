@@ -11,6 +11,14 @@ public class APIService {
         self.apiKey = apiKey
         self.companyName = companyName
     }
+
+    // The content API has no session-auth path — a key-less kit must fail fast with
+    // a clear message instead of a bare 401.
+    private var missingKeyError: String? {
+        apiKey == nil
+            ? "⚠️ The content API requires an apiKey; session-based auth does not cover it."
+            : nil
+    }
     
     /// Fetches content data from the API based on the provided parameters.
     ///
@@ -34,6 +42,9 @@ public class APIService {
         includeKinestex: Bool? = nil,
         customParams: [String: String]? = nil
     ) async -> APIContentResult {
+        if let missingKeyError = missingKeyError {
+            return .error(missingKeyError)
+        }
         // Determine endpoint
         let endpoint: String = {
             switch contentType {

@@ -502,6 +502,12 @@ public struct KinesteXAIKit {
             return nil
         }
 
+        // Neither a key nor a session means the web's verify gate never opens and
+        // the launch stalls on the loading screen — make the misconfiguration loud.
+        if apiKey == nil && merged["session"] == nil {
+            print("⚠️ KinesteX: no apiKey and no 'session' custom param — the experience cannot authenticate.")
+        }
+
         return merged
     }
 

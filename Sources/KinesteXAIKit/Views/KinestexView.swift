@@ -184,75 +184,45 @@ struct KinestexView: View {
     }
     
     private func updateCurrentExercise(_ exercise: String?) {
-        guard let webView = webViewState.webView else {
-            print("⚠️ KinesteX: WebView is not available")
-            return
-        }
-        let script: String
-        if let exercise = exercise {
-            script = "window.postMessage({ 'currentExercise': '\(exercise)' }, '*');"
-        } else {
+        guard let exercise = exercise else {
             print("⚠️ KinesteX: Exercise is nil")
             return
         }
-        webView.evaluateJavaScript(script) { _, error in
-            if let error = error {
-                print("⚠️ KinesteX: JavaScript Error: \(error.localizedDescription)")
-            } else {
-                print("✅ KinesteX: Successfully updated exercise to: \(exercise ?? "NA")")
-            }
-        }
+        // Serialized like updateWorkoutAction — raw interpolation broke on names
+        // containing quotes (e.g. "Child's Pose") and was a JS-injection sink.
+        postPayload(["currentExercise": exercise], label: "exercise \(exercise)")
     }
-    
-    private func updateCurrentRestSpeech(_ restSpeech: String?) { // Now accepts String?
+
+    private func updateCurrentRestSpeech(_ restSpeech: String?) {
+        guard let restSpeech = restSpeech else {
+            print("⚠️ KinesteX: Rest Speech is nil")
+            return
+        }
+        postPayload(["currentRestSpeech": restSpeech], label: "rest speech \(restSpeech)")
+    }
+
+    private func postPayload(_ payload: [String: Any], label: String) {
         guard let webView = webViewState.webView else {
             print("⚠️ KinesteX: WebView is not available")
             return
         }
-        let script: String
-        if let restSpeech = restSpeech {
-            script = "window.postMessage({ 'currentRestSpeech': '\(restSpeech)' }, '*');"
-        } else {
-            print("⚠️ KinesteX: Rest Speech is nil")
+        guard JSONSerialization.isValidJSONObject(payload),
+              let jsonData = try? JSONSerialization.data(withJSONObject: payload),
+              let jsonString = String(data: jsonData, encoding: .utf8) else {
+            print("⚠️ KinesteX: Cannot convert payload to JSON string")
             return
         }
-        webView.evaluateJavaScript(script) { _, error in
+        webView.evaluateJavaScript("window.postMessage(\(jsonString), '*');") { _, error in
             if let error = error {
                 print("⚠️ KinesteX: JavaScript Error: \(error.localizedDescription)")
             } else {
-                print("✅ KinesteX: Successfully updated rest speech to: \(restSpeech ?? "NA")")
+                print("✅ KinesteX: Successfully sent \(label)")
             }
         }
     }
     
     private func updateWorkoutAction(_ action: [String: Any]) {
-        guard let webView = webViewState.webView else {
-                print("⚠️ KinesteX: WebView not ready")
-                return
-            }
-        
-        do {
-            let jsonData = try JSONSerialization.data(withJSONObject: action)
-            guard let jsonString = String(data: jsonData, encoding: .utf8) else {
-                print("⚠️ KinesteX: Cannot convert payload to JSON string")
-                return
-            }
-            
-            let script = """
-            window.postMessage(\(jsonString), '*');
-            """
-            
-            webView.evaluateJavaScript(script) { _, error in
-                if let error {
-                    print("⚠️ KinesteX: Failed to send action payload: \(error)")
-                } else {
-                    print("→ Sent workout action payload: \(action)")
-                }
-            }
-        } catch {
-            print("⚠️ KinesteX: Failed to serialize action payload: \(error)")
-            return
-        }
+        postPayload(action, label: "workout action payload")
     }
 
 }

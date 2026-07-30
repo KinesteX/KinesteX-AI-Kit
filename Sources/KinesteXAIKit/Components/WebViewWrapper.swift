@@ -7,6 +7,15 @@ class DebugWKWebView: WKWebView {
     }
 }
 
+// Escapes a value for a single-quoted JS literal — URLs may legally contain
+// apostrophes (e.g. a plan named "John's Plan"), which would otherwise terminate
+// the literal and break the auth script.
+func jsSingleQuoted(_ value: String) -> String {
+    value
+        .replacingOccurrences(of: "\\", with: "\\\\")
+        .replacingOccurrences(of: "'", with: "\\'")
+}
+
 // Cross-platform WebView wrapper view
 @available(iOS 13.0, macOS 10.15, *)
 struct WebViewWrapperView: View {
@@ -183,14 +192,19 @@ struct WebViewWrapper: UIViewRepresentable {
             if let data = data {
                 scriptData.merge(data) { _, new in new }
             }
-            if let jsonData = try? JSONSerialization.data(withJSONObject: scriptData, options: []),
+            let origin = jsSingleQuoted(url.absoluteString)
+            // isValidJSONObject first: JSONSerialization raises an uncatchable
+            // NSException (not a Swift error) on Date/NaN values, so try? alone
+            // would crash instead of reaching the fallback.
+            if JSONSerialization.isValidJSONObject(scriptData),
+               let jsonData = try? JSONSerialization.data(withJSONObject: scriptData, options: []),
                let jsonString = String(data: jsonData, encoding: .utf8) {
-                return "window.postMessage(\(jsonString), '\(url.absoluteString)');"
+                return "window.postMessage(\(jsonString), '\(origin)');"
             }
             // A missing key must be OMITTED, never sent as "" — an empty key passes the
             // web's key-presence gate and fires a doomed legacy-auth attempt.
             let keyField = apiKey.map { "'key': '\($0)', " } ?? ""
-            return "window.postMessage({ \(keyField)'company': '\(companyName)', 'userId': '\(userId)' }, '\(url.absoluteString)');"
+            return "window.postMessage({ \(keyField)'company': '\(companyName)', 'userId': '\(userId)' }, '\(origin)');"
         }
         
         public func userContentController(_ userContentController: WKUserContentController, didReceive message: WKScriptMessage) {
@@ -334,14 +348,19 @@ public struct WebViewWrapper: NSViewRepresentable {
             if let data = parent.data {
                 scriptData.merge(data) { _, new in new }
             }
-            if let jsonData = try? JSONSerialization.data(withJSONObject: scriptData, options: []),
+            let origin = jsSingleQuoted(parent.url.absoluteString)
+            // isValidJSONObject first: JSONSerialization raises an uncatchable
+            // NSException (not a Swift error) on Date/NaN values, so try? alone
+            // would crash instead of reaching the fallback.
+            if JSONSerialization.isValidJSONObject(scriptData),
+               let jsonData = try? JSONSerialization.data(withJSONObject: scriptData, options: []),
                let jsonString = String(data: jsonData, encoding: .utf8) {
-                return "window.postMessage(\(jsonString), '\(parent.url)');"
+                return "window.postMessage(\(jsonString), '\(origin)');"
             }
             // A missing key must be OMITTED, never sent as "" — an empty key passes the
             // web's key-presence gate and fires a doomed legacy-auth attempt.
             let keyField = parent.apiKey.map { "'key': '\($0)', " } ?? ""
-            return "window.postMessage({ \(keyField)'company': '\(parent.companyName)', 'userId': '\(parent.userId)' }, '\(parent.url)');"
+            return "window.postMessage({ \(keyField)'company': '\(parent.companyName)', 'userId': '\(parent.userId)' }, '\(origin)');"
         }
         
         public func userContentController(_ userContentController: WKUserContentController, didReceive message: WKScriptMessage) {

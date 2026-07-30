@@ -36,7 +36,8 @@ Use Swift Package Manager:
    ```
 
    Using session-based auth instead? Omit `apiKey` and pass your session id with
-   the view's custom params:
+   the view's custom params (note: the content-fetch API — `fetchWorkouts`,
+   `fetchPlans`, etc. — still requires an `apiKey`):
 
    ```swift
    let kit = KinesteXAIKit(companyName: "MyCompany", userId: "user-123")
@@ -46,7 +47,7 @@ Use Swift Package Manager:
 
    **Sending data at runtime**: pass a `WebViewState` into any view factory
    (`webViewState:` parameter), then post arbitrary JSON to the running
-   experience at any time:
+   experience any time after it has loaded (the `kinestex_loaded` message):
 
    ```swift
    @StateObject var webViewState = WebViewState()

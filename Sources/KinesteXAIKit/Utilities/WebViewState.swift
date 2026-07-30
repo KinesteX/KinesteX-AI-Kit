@@ -24,7 +24,8 @@ public class WebViewState: ObservableObject {
 
     /// Posts an arbitrary JSON payload into the running KinesteX experience via
     /// `window.postMessage` — e.g. `["type": "update_trainer_profile", "age": 32]`.
-    /// The web view must be loaded (pass this state object into the view factory).
+    /// Send only after the experience has loaded (the `kinestex_loaded` message):
+    /// earlier posts are silently dropped by the page, not queued.
     public func sendMessage(_ payload: [String: Any]) {
         guard let webView = webView else {
             print("⚠️ KinesteX: sendMessage failed — web view is not available yet")
