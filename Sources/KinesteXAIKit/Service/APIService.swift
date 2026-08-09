@@ -23,6 +23,8 @@ public class APIService {
     /// Fetches content data from the API based on the provided parameters.
     ///
     /// - Parameters:
+    ///   - category: Optional category filter. `nil` or blank means no filter — all
+    ///     categories are returned.
     ///   - includeKinestex: When set, controls whether KinesteX-owned content is
     ///     included in the response by sending `include_kinestex=true|false`.
     ///     When `nil`, the parameter is omitted and the server default applies.
@@ -74,7 +76,10 @@ public class APIService {
         var queryItems: [URLQueryItem] = [
             .init(name: "lang", value: lang)
         ]
-        if let category = category {
+        // A blank category means "no filter" — never send it to the API, where a
+        // whitespace-only value would match nothing.
+        if let category = category,
+           !category.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
             queryItems.append(.init(name: "category", value: category))
         }
         if let lastDocId = lastDocId {
