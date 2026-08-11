@@ -14,6 +14,11 @@ struct KinestexView: View {
     @StateObject private var _internalWebViewState = WebViewState()
     let externalWebViewState: WebViewState?
     @State private var showOverlay: Bool = true
+    @State private var showRetry: Bool = false
+    @State private var launched: Bool = false
+    @State private var retryMessage: String = ""
+    @State private var launchTimer: DispatchWorkItem?
+    @State private var didStartLaunch: Bool = false
     @Binding var currentExercise: String?
     @Binding var currentRestSpeech: String?
     @Binding var workoutAction: [String: Any]?
@@ -59,7 +64,25 @@ struct KinestexView: View {
         }
     }
 
-    
+    /// Overlay icon/text color, derived from the background luminance so the
+    /// icon is always legible: black on a light background, white on a dark one.
+    private var foregroundColor: Color {
+        backgroundIsDark ? .white : .black
+    }
+
+    /// Whether the resolved overlay background is dark (mirrors `overlayColor`).
+    private var backgroundIsDark: Bool {
+        if let hex = style?.loadingBackgroundColor {
+            return Color.isHexDark(hex)
+        }
+        return style?.style != "light"
+    }
+
+    private var connectionMessageText: String {
+        connectionMessage(for: data?["language"])
+    }
+
+
     public var body: some View {
         ZStack {
             WebViewWrapperView(
@@ -70,18 +93,7 @@ struct KinestexView: View {
                 data: data,
                 isLoading: $isLoading,
                 onMessageReceived: { message in
-                    // Forward to caller
-                    switch message {
-                    case .kinestex_loaded(let data):
-                        DispatchQueue.main.asyncAfter(deadline: .now() + 0.35) {
-                            self.showOverlay = false
-                        }
-                        break
-                        
-                    default:
-                        break
-                    }
-                    onMessageReceived(message)
+                    handle(message)
                 },
                 webViewState: webViewState
             )
@@ -89,10 +101,30 @@ struct KinestexView: View {
 //                KinestexOverlayView(style: style)
 //            }
             if showOverlay {
-                KinestexOverlayView(style: style)
+                KinestexOverlayView(
+                    style: style,
+                    foregroundColor: foregroundColor,
+                    onBack: exitKinesteX
+                )
+            }
+            if showRetry {
+                RetryView(
+                    message: retryMessage.isEmpty ? connectionMessageText : retryMessage,
+                    backgroundColor: overlayColor,
+                    foregroundColor: foregroundColor,
+                    onRetry: reload,
+                    onBack: exitKinesteX
+                )
             }
         }
         .background(overlayColor)
+        .onAppear {
+            // Start the 7s launch timer once, on first appearance.
+            if !didStartLaunch {
+                didStartLaunch = true
+                startLaunchTimer()
+            }
+        }
         .onChange(of: currentExercise) { newValue in
             if let exercise = newValue {
                 updateCurrentExercise(exercise)
@@ -108,6 +140,7 @@ struct KinestexView: View {
             updateWorkoutAction(action)
         }
         .onDisappear {
+            cancelLaunchTimer()
             print("🗑️ KinesteX: cleaning up...")
             guard let webView = webViewState.webView else {
                 print("⚠️ KinesteX: No web view to clean up")
@@ -183,6 +216,87 @@ struct KinestexView: View {
         }
     }
     
+    // MARK: - Retry logic
+
+    /// Handles every message from the web view, then forwards it to the caller.
+    private func handle(_ message: KinestexMessage) {
+        switch message {
+        case .kinestex_launched:
+            launched = true
+            cancelLaunchTimer()
+            showRetry = false
+        case .kinestex_loaded:
+            cancelLaunchTimer()
+            showRetry = false
+            DispatchQueue.main.asyncAfter(deadline: .now() + 0.35) {
+                self.showOverlay = false
+            }
+        case .error_occurred(let data):
+            if !launched {
+                showRetryScreen(errorMessage(from: data))
+            }
+        default:
+            break
+        }
+        onMessageReceived(message)
+    }
+
+    /// Shows the retry screen if KinesteX doesn't launch within 7 seconds.
+    private func startLaunchTimer() {
+        cancelLaunchTimer()
+        let work = DispatchWorkItem {
+            print("⚠️ KinesteX: did not launch within 7s — showing retry")
+            self.showRetryScreen(self.connectionMessageText)
+        }
+        launchTimer = work
+        DispatchQueue.main.asyncAfter(deadline: .now() + 7, execute: work)
+    }
+
+    private func cancelLaunchTimer() {
+        launchTimer?.cancel()
+        launchTimer = nil
+    }
+
+    private func showRetryScreen(_ message: String) {
+        cancelLaunchTimer()
+        retryMessage = message
+        isLoading = false
+        showRetry = true
+    }
+
+    /// Reloads the web view (the retry button's action).
+    private func reload() {
+        launched = false
+        showRetry = false
+        showOverlay = true
+        startLaunchTimer()
+        webViewState.webView?.load(URLRequest(url: url))
+    }
+
+    /// Back button on the retry screen — tells the host to close KinesteX.
+    private func exitKinesteX() {
+        let exitData: [String: Any] = [
+            "type": "exit_kinestex",
+            "timestamp": ISO8601DateFormatter().string(from: Date())
+        ]
+        onMessageReceived(.exit_kinestex(exitData))
+    }
+
+    /// Pulls a human-readable message out of an error payload, or falls back
+    /// to the localized "connect to the internet" message.
+    private func errorMessage(from data: [String: Any]) -> String {
+        var text: String?
+        if let nested = data["data"] as? String {
+            text = nested
+        } else if let nested = data["data"] as? [String: Any], let message = nested["message"] as? String {
+            text = message
+        } else if let message = data["message"] as? String {
+            text = message
+        }
+        let trimmed = text?.trimmingCharacters(in: .whitespacesAndNewlines) ?? ""
+        return trimmed.isEmpty ? connectionMessageText : trimmed
+    }
+
     private func updateCurrentExercise(_ exercise: String?) {
         guard let exercise = exercise else {
             print("⚠️ KinesteX: Exercise is nil")
@@ -229,6 +343,8 @@ struct KinestexView: View {
 
 struct KinestexOverlayView: View {
     let style: IStyle?
+    let foregroundColor: Color
+    let onBack: () -> Void
 
     private var overlayColor: Color {
         if let hex = style?.loadingBackgroundColor {
@@ -241,7 +357,103 @@ struct KinestexOverlayView: View {
     }
 
     var body: some View {
-        overlayColor
-            .ignoresSafeArea()
+        ZStack {
+            overlayColor.ignoresSafeArea()
+            KinestexBackButton(color: foregroundColor, action: onBack)
+        }
     }
 }
+
+struct KinestexBackButton: View {
+    let color: Color
+    let action: () -> Void
+
+    var body: some View {
+        VStack {
+            HStack {
+                Button(action: action) {
+                    Image("ic_arrow_left", bundle: .module)
+                        .renderingMode(.template)
+                        .resizable()
+                        .frame(width: 20, height: 20)
+                        .foregroundColor(color)
+                        .frame(width: 40, height: 40)
+                }
+                .buttonStyle(.plain)
+                Spacer()
+            }
+            Spacer()
+        }
+        .padding(16)
+    }
+}
+
+/// Full-screen retry screen: a back button (top-left) and a centered refresh
+/// icon + message. Tapping the center reloads the web view.
+struct RetryView: View {
+    let message: String
+    let backgroundColor: Color
+    let foregroundColor: Color
+    let onRetry: () -> Void
+    let onBack: () -> Void
+
+    var body: some View {
+        ZStack {
+            backgroundColor.ignoresSafeArea()
+            
+            KinestexBackButton(color: foregroundColor, action: onBack)
+
+            // Retry, centered.
+            Button(action: onRetry) {
+                VStack(spacing: 12) {
+                    Image("ic_refresh", bundle: .module)
+                        .renderingMode(.template)
+                        .resizable()
+                        .frame(width: 42, height: 42)
+                        .foregroundColor(foregroundColor)
+                    Text(message)
+                        .multilineTextAlignment(.center)
+                        .foregroundColor(foregroundColor)
+                        .font(.system(size: 16))
+                        .padding(.horizontal, 24)
+                }
+            }
+            .buttonStyle(.plain)
+        }
+    }
+}
+
+/// Returns a localized "please connect to the internet" message for the given
+/// language code (e.g. "en", "es", "pt-BR", "zh_CN"). Falls back to English.
+func connectionMessage(for language: Any?) -> String {
+    var code = (language as? String)?.lowercased().trimmingCharacters(in: .whitespaces) ?? ""
+    // Keep only the primary subtag: "pt-BR" -> "pt", "zh_CN" -> "zh".
+    code = code.split(whereSeparator: { $0 == "-" || $0 == "_" }).first.map(String.init) ?? ""
+    // Normalize legacy codes.
+    code = ["iw": "he", "in": "id"][code] ?? code
+    return connectionMessages[code] ?? connectionMessages["en"]!
+}
+
+private let connectionMessages: [String: String] = [
+    "en": "Please connect to the internet and try again",
+    "ar": "يرجى الاتصال بالإنترنت والمحاولة مرة أخرى",
+    "es": "Conéctate a Internet e inténtalo de nuevo",
+    "it": "Connettiti a Internet e riprova",
+    "he": "אנא התחבר לאינטרנט ונסה שוב",
+    "zh": "请连接到互联网后重试",
+    "pt": "Conecte-se à Internet e tente novamente",
+    "uk": "Підключіться до Інтернету та повторіть спробу",
+    "bn": "অনুগ্রহ করে ইন্টারনেটে সংযুক্ত হয়ে আবার চেষ্টা করুন",
+    "ru": "Пожалуйста, подключитесь к интернету и повторите попытку",
+    "hi": "कृपया इंटरनेट से कनेक्ट करें और पुनः प्रयास करें",
+    "id": "Silakan sambungkan ke internet dan coba lagi",
+    "fr": "Veuillez vous connecter à Internet et réessayer",
+    "el": "Συνδεθείτε στο διαδίκτυο και δοκιμάστε ξανά",
+    "nl": "Maak verbinding met internet en probeer het opnieuw",
+    "de": "Bitte stellen Sie eine Internetverbindung her und versuchen Sie es erneut",
+    "uz": "Iltimos, internetga ulaning va qayta urinib ko‘ring",
+    "kk": "Интернетке қосылып, қайталап көріңіз",
+    "ja": "インターネットに接続して、もう一度お試しください",
+    "tr": "Lütfen internete bağlanın ve tekrar deneyin",
+    "ko": "인터넷에 연결한 후 다시 시도해 주세요",
+]
