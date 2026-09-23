@@ -89,7 +89,7 @@ struct WebViewWrapper: UIViewRepresentable {
         webView.allowsLinkPreview = false
         webView.allowsBackForwardNavigationGestures = true
         webView.backgroundColor = .black
-        webView.useDoneOnlyKeyboardAccessory()
+        webView.hideKeyboardAccessoryBar()
         
         webView.load(URLRequest(url: url))
         

@@ -92,7 +92,8 @@ struct KinestexView: View {
                 KinestexOverlayView(style: style)
             }
         }
-        .background(overlayColor)
+        // Fill under the keyboard and safe areas so the host's background never frames the page.
+        .background(overlayColor.ignoresSafeArea())
         .onChange(of: currentExercise) { newValue in
             if let exercise = newValue {
                 updateCurrentExercise(exercise)
