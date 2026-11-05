@@ -27,6 +27,7 @@ struct WebViewWrapperView: View {
     @Binding var isLoading: Bool
     let onMessageReceived: (KinestexMessage) -> Void
     @ObservedObject var webViewState: WebViewState
+    let lifecycle: WebViewLifecycle
     
     public var body: some View {
 #if os(iOS) || targetEnvironment(macCatalyst)
@@ -38,7 +39,8 @@ struct WebViewWrapperView: View {
             data: data,
             isLoading: $isLoading,
             onMessageReceived: onMessageReceived,
-            webViewState: webViewState
+            webViewState: webViewState,
+            lifecycle: lifecycle
         )
 #elseif os(macOS)
         WebViewWrapper(
@@ -49,7 +51,8 @@ struct WebViewWrapperView: View {
             data: data,
             isLoading: $isLoading,
             onMessageReceived: onMessageReceived,
-            webViewState: webViewState
+            webViewState: webViewState,
+            lifecycle: lifecycle
         )
 #endif
     }
@@ -66,6 +69,7 @@ struct WebViewWrapper: UIViewRepresentable {
     @Binding var isLoading: Bool
     let onMessageReceived: (KinestexMessage) -> Void
     @ObservedObject var webViewState: WebViewState
+    let lifecycle: WebViewLifecycle
     
     public func makeUIView(context: Context) -> WKWebView {
         let contentController = WKUserContentController()
@@ -93,6 +97,12 @@ struct WebViewWrapper: UIViewRepresentable {
         
         webView.load(URLRequest(url: url))
         
+        lifecycle.webView = webView
+        lifecycle.reloadPage = { [weak webView, weak coordinator = context.coordinator] in
+            guard let webView, let coordinator else { return }
+            coordinator.restorePage(in: webView)
+        }
+
         DispatchQueue.main.async {
             self.webViewState.webView = webView
         }
@@ -108,6 +118,7 @@ struct WebViewWrapper: UIViewRepresentable {
         Coordinator(
             isLoading: $isLoading,
             webViewState: webViewState,
+            lifecycle: lifecycle,
             onMessageReceived: onMessageReceived,
             apiKey: apiKey,
             companyName: companyName,
@@ -120,16 +131,24 @@ struct WebViewWrapper: UIViewRepresentable {
     public class Coordinator: NSObject, WKNavigationDelegate, WKScriptMessageHandler, WKUIDelegate {
         let isLoading: Binding<Bool>
         let webViewState: WebViewState
+        let lifecycle: WebViewLifecycle
         let onMessageReceived: (KinestexMessage) -> Void
         let apiKey: String?
         let companyName: String
         let userId: String
         let data: [String: Any]?
         let url: URL
+        // Set by kinestex_loaded, cleared by every load of `url`. Until it is set the page has
+        // no UI of its own, so a failed load would leave the user on the overlay.
+        private var pageLoaded = false
+        private var recentCrashes: [Date] = []
+        private static let maxCrashReloads = 2
+        private static let crashReloadWindow: TimeInterval = 120
 
         init(
             isLoading: Binding<Bool>,
             webViewState: WebViewState,
+            lifecycle: WebViewLifecycle,
             onMessageReceived: @escaping (KinestexMessage) -> Void,
             apiKey: String?,
             companyName: String,
@@ -139,6 +158,7 @@ struct WebViewWrapper: UIViewRepresentable {
         ) {
             self.isLoading = isLoading
             self.webViewState = webViewState
+            self.lifecycle = lifecycle
             self.onMessageReceived = onMessageReceived
             self.apiKey = apiKey
             self.companyName = companyName
@@ -151,14 +171,71 @@ struct WebViewWrapper: UIViewRepresentable {
             print("🗑️ KinesteX: Coordinator deinitialized")
         }
         
+        func loadPage(in webView: WKWebView) {
+            pageLoaded = false
+            webView.load(URLRequest(url: url))
+        }
+
+        // Reloads a page the onDisappear cleanup blanked, first re-attaching the delegates and
+        // the message handler that the cleanup may already have detached.
+        func restorePage(in webView: WKWebView) {
+            webView.navigationDelegate = self
+            webView.uiDelegate = self
+            let contentController = webView.configuration.userContentController
+            contentController.removeScriptMessageHandler(forName: "listener")
+            contentController.add(self, name: "listener")
+            webViewState.webView = webView
+            loadPage(in: webView)
+        }
+
+        // Same shape as the web app's own errors, through the usual message path.
+        private func reportError(_ description: String) {
+            let json: [String: Any] = [
+                "type": "error_occurred",
+                "severity": "critical",
+                "data": description
+            ]
+            DispatchQueue.main.async {
+                self.onMessageReceived(.error_occurred(json))
+            }
+        }
+
+        // Reloads the page, but reports a page that keeps crashing (for example out of memory
+        // while the pose engine starts) instead of reloading it forever.
         public func webViewWebContentProcessDidTerminate(_ webView: WKWebView) {
             print("❌ KinesteX: Web content process terminated")
-            webView.stopLoading()
-            webView.navigationDelegate = nil
-            webView.uiDelegate = nil
-            webView.configuration.userContentController.removeAllScriptMessageHandlers()
-            webViewState.webView = nil
+            // A hidden view must not restart the camera off screen; its onAppear reloads it.
+            if lifecycle.isCleanedUp { return }
+            let now = Date()
+            recentCrashes = recentCrashes.filter { now.timeIntervalSince($0) < Self.crashReloadWindow } + [now]
+            if recentCrashes.count <= Self.maxCrashReloads {
+                print("🔄 KinesteX: Reloading the page")
+                loadPage(in: webView)
+                return
+            }
+            recentCrashes.removeAll()
             isLoading.wrappedValue = false
+            reportError("Web content process terminated repeatedly")
+        }
+
+        public func webView(_ webView: WKWebView, didFailProvisionalNavigation navigation: WKNavigation!, withError error: Error) {
+            handleLoadFailure(error)
+        }
+
+        public func webView(_ webView: WKWebView, didFail navigation: WKNavigation!, withError error: Error) {
+            handleLoadFailure(error)
+        }
+
+        // After kinestex_loaded a failed navigation (a link the page opened) leaves the running
+        // page in place, so only failures before it are reported.
+        private func handleLoadFailure(_ error: Error) {
+            let nsError = error as NSError
+            // Another navigation replaced this one (a client-side redirect or a new load).
+            if nsError.domain == NSURLErrorDomain && nsError.code == NSURLErrorCancelled { return }
+            guard !pageLoaded else { return }
+            print("❌ KinesteX: Page failed to load: \(error.localizedDescription)")
+            isLoading.wrappedValue = false
+            reportError("Page failed to load: \(error.localizedDescription)")
         }
         
         @available(iOS 15.0, *)
@@ -246,7 +323,9 @@ struct WebViewWrapper: UIViewRepresentable {
                     webViewMessage = .workout_completed(json)
                 case "kinestex_loaded":
                     webViewMessage = .kinestex_loaded(json)
-                    if let webView = webViewState.webView {
+                    pageLoaded = true
+                    // The view that sent it: a WebViewState shared with another view may point at that one.
+                    if let webView = message.webView {
                         let script = createPostMessageScript()
                         webView.evaluateJavaScript(script) { _, error in
                             if let error = error {
@@ -284,6 +363,7 @@ public struct WebViewWrapper: NSViewRepresentable {
     @Binding var isLoading: Bool
     let onMessageReceived: (KinestexMessage) -> Void
     @ObservedObject var webViewState: WebViewState
+    let lifecycle: WebViewLifecycle
     
     public func makeNSView(context: Context) -> WKWebView {
         let contentController = WKUserContentController()
@@ -303,6 +383,12 @@ public struct WebViewWrapper: NSViewRepresentable {
         
         webView.load(URLRequest(url: url))
         
+        lifecycle.webView = webView
+        lifecycle.reloadPage = { [weak webView, weak coordinator = context.coordinator] in
+            guard let webView, let coordinator else { return }
+            coordinator.restorePage(in: webView)
+        }
+
         DispatchQueue.main.async {
             self.webViewState.webView = webView
         }
@@ -320,11 +406,55 @@ public struct WebViewWrapper: NSViewRepresentable {
     
     public class Coordinator: NSObject, WKNavigationDelegate, WKScriptMessageHandler, WKUIDelegate {
         let parent: WebViewWrapper
+        // Set by kinestex_loaded, cleared by every load of `url`. Until it is set the page has
+        // no UI of its own, so a failed load would leave the user on the overlay.
+        private var pageLoaded = false
         deinit {
             print("🗑️ Coordinator deinitialized")
         }
         init(parent: WebViewWrapper) {
             self.parent = parent
+        }
+
+        // Reloads a page the onDisappear cleanup blanked, first re-attaching the delegates and
+        // the message handler that the cleanup may already have detached.
+        func restorePage(in webView: WKWebView) {
+            webView.navigationDelegate = self
+            webView.uiDelegate = self
+            let contentController = webView.configuration.userContentController
+            contentController.removeScriptMessageHandler(forName: "listener")
+            contentController.add(self, name: "listener")
+            parent.webViewState.webView = webView
+            pageLoaded = false
+            webView.load(URLRequest(url: parent.url))
+        }
+
+        public func webView(_ webView: WKWebView, didFailProvisionalNavigation navigation: WKNavigation!, withError error: Error) {
+            handleLoadFailure(error)
+        }
+
+        public func webView(_ webView: WKWebView, didFail navigation: WKNavigation!, withError error: Error) {
+            handleLoadFailure(error)
+        }
+
+        // After kinestex_loaded a failed navigation (a link the page opened) leaves the running
+        // page in place, so only failures before it are reported.
+        private func handleLoadFailure(_ error: Error) {
+            let nsError = error as NSError
+            // Another navigation replaced this one (a client-side redirect or a new load).
+            if nsError.domain == NSURLErrorDomain && nsError.code == NSURLErrorCancelled { return }
+            guard !pageLoaded else { return }
+            print("❌ KinesteX: Page failed to load: \(error.localizedDescription)")
+            parent.isLoading = false
+            // Same shape as the web app's own errors, through the usual message path.
+            let json: [String: Any] = [
+                "type": "error_occurred",
+                "severity": "critical",
+                "data": "Page failed to load: \(error.localizedDescription)"
+            ]
+            DispatchQueue.main.async {
+                self.parent.onMessageReceived(.error_occurred(json))
+            }
         }
         
         public func webView(_ webView: WKWebView, didStartProvisionalNavigation navigation: WKNavigation!) {
@@ -387,7 +517,9 @@ public struct WebViewWrapper: NSViewRepresentable {
                 case "workout_completed": webViewMessage = .workout_completed(json)
                 case "kinestex_loaded":
                     webViewMessage = .kinestex_loaded(json)
-                    if let webView = parent.webViewState.webView {
+                    pageLoaded = true
+                    // The view that sent it: a WebViewState shared with another view may point at that one.
+                    if let webView = message.webView {
                         let script = createPostMessageScript()
                         webView.evaluateJavaScript(script) { _, error in
                             if let error = error {
