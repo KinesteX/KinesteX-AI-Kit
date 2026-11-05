@@ -2,6 +2,35 @@ import SwiftUI
 import WebKit
 import Combine
 
+// One per KinestexView, shared with its web view's coordinator. onDisappear blanks the page to
+// release the camera and GPU, but a NavigationStack push or a TabView switch later shows the
+// same view again without remaking the web view, so onAppear reloads the page. Kept per view,
+// not on WebViewState, because a host may pass one WebViewState to several views.
+@MainActor
+final class WebViewLifecycle {
+    weak var webView: WKWebView?
+    var reloadPage: (@MainActor () -> Void)?
+    private(set) var isCleanedUp = false
+    private var cleanupID = 0
+
+    func beginCleanup() -> Int {
+        isCleanedUp = true
+        cleanupID += 1
+        return cleanupID
+    }
+
+    // False once the view appeared again, or a newer cleanup began, after cleanup `id` started.
+    func isCurrentCleanup(_ id: Int) -> Bool {
+        isCleanedUp && id == cleanupID
+    }
+
+    func reloadIfCleanedUp() {
+        guard isCleanedUp else { return }
+        isCleanedUp = false
+        reloadPage?()
+    }
+}
+
 struct KinestexView: View {
     let apiKey: String?
     let companyName: String
@@ -14,6 +43,7 @@ struct KinestexView: View {
     @StateObject private var _internalWebViewState = WebViewState()
     let externalWebViewState: WebViewState?
     @State private var showOverlay: Bool = true
+    @State private var lifecycle = WebViewLifecycle()
     @Binding var currentExercise: String?
     @Binding var currentRestSpeech: String?
     @Binding var workoutAction: [String: Any]?
@@ -72,7 +102,9 @@ struct KinestexView: View {
                 onMessageReceived: { message in
                     // Forward to caller
                     switch message {
-                    case .kinestex_loaded(let data):
+                    // error_occurred too: the kit reports a failed load or repeated crashes
+                    // when no kinestex_loaded will come to hide the overlay.
+                    case .kinestex_loaded, .error_occurred:
                         DispatchQueue.main.asyncAfter(deadline: .now() + 0.35) {
                             self.showOverlay = false
                         }
@@ -83,7 +115,8 @@ struct KinestexView: View {
                     }
                     onMessageReceived(message)
                 },
-                webViewState: webViewState
+                webViewState: webViewState,
+                lifecycle: lifecycle
             )
 //            if isLoading {
 //                KinestexOverlayView(style: style)
@@ -107,12 +140,20 @@ struct KinestexView: View {
             guard let action = newValue, !action.isEmpty else { return }
             updateWorkoutAction(action)
         }
+        .onAppear {
+            lifecycle.reloadIfCleanedUp()
+        }
         .onDisappear {
             print("🗑️ KinesteX: cleaning up...")
-            guard let webView = webViewState.webView else {
+            // Read now: once the view is removed, @State returns its initial value, not this instance.
+            let lifecycle = self.lifecycle
+            let webViewState = self.webViewState
+            // This view's own web view: a WebViewState shared with another view may point at that one.
+            guard let webView = lifecycle.webView else {
                 print("⚠️ KinesteX: No web view to clean up")
                 return
             }
+            let cleanupID = lifecycle.beginCleanup()
             
             let cleanupScript = """
                 (function() {
@@ -152,31 +193,44 @@ struct KinestexView: View {
             // Step 1: Pause all media playback (iOS 15.0+)
             if #available(iOS 15.0, macOS 12.0, *) {
                 webView.pauseAllMediaPlayback {
-                    runCleanupScript(webView, cleanupScript)
+                    runCleanupScript(webView, cleanupScript, webViewState, lifecycle, cleanupID)
                 }
             } else {
-                runCleanupScript(webView, cleanupScript)
+                runCleanupScript(webView, cleanupScript, webViewState, lifecycle, cleanupID)
             }
         }
     }
     
-    // Helper function to run cleanup script and proceed
-    private func runCleanupScript(_ webView: WKWebView, _ script: String) {
+    // Helper function to run cleanup script and proceed. Each step stops if the view appeared
+    // again in the meantime: onAppear has already reloaded the page.
+    private func runCleanupScript(
+        _ webView: WKWebView,
+        _ script: String,
+        _ webViewState: WebViewState,
+        _ lifecycle: WebViewLifecycle,
+        _ cleanupID: Int
+    ) {
+        guard lifecycle.isCurrentCleanup(cleanupID) else { return }
         webView.evaluateJavaScript(script) { _, error in
             if let error = error {
                 print("⚠️ KinesteX: Error executing cleanup script: \(error)")
             } else {
+                guard lifecycle.isCurrentCleanup(cleanupID) else { return }
                 // Step 2: Load a blank page to reset state
                 webView.load(URLRequest(url: URL(string: "about:blank")!))
                 // Step 3: Perform final cleanup after a short delay
                 DispatchQueue.main.asyncAfter(deadline: .now() + 0.2) {
+                    guard lifecycle.isCurrentCleanup(cleanupID) else { return }
                     webView.stopLoading()
                     webView.navigationDelegate = nil
                     webView.uiDelegate = nil
                     webView.configuration.userContentController.removeAllScriptMessageHandlers()
                     webView.configuration.userContentController.removeAllUserScripts()
                     
-                    webViewState.webView = nil
+                    // A shared WebViewState may already point at the view that replaced this one.
+                    if webViewState.webView === webView {
+                        webViewState.webView = nil
+                    }
                     print("✅ KinesteX: cleaned up and set webView to nil")
                 }
             }
